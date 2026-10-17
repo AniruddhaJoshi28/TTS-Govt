@@ -63,3 +63,10 @@ def make_pdf(text: str | None) -> bytes:
         out += b"%010d 00000 n \n" % off
     out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
     return bytes(out)
+
+
+def passage(pid: str, text: str, page: int = 1):
+    from services.retrieval.bm25 import Passage
+
+    return Passage(passage_id=pid, document_id=f"doc-{pid}", version_id="v1",
+                   url=f"https://gr.example.gov.in/{pid}.pdf", page=page, text=text)

@@ -16,7 +16,8 @@ The full programme (scope, architecture, workstreams, 24-week roadmap, acceptanc
 | Versioned store | [services/document_ingestion/store.py](services/document_ingestion/store.py): content-addressed originals, dedup, revision history, retry queue, crawl runs (SQLite until weeks 6–8) |
 | PDF extraction | [services/pdf_ocr/extract.py](services/pdf_ocr/extract.py): page-level text, scanned pages flagged `needs_ocr`; OCR engine not yet integrated |
 | Metadata | [services/metadata_extraction/normalise.py](services/metadata_extraction/normalise.py): Devanagari/Odia digits, day-first dates, rupee amounts with source spans |
-| Edge-case matrix (plan §4) | [data/test_manifests/edge_cases.yaml](data/test_manifests/edge_cases.yaml): EC-01–03 implemented, 20 pending |
+| Grounded Q&A (weeks 9–11, partial) | BM25 retrieval, pluggable SLM, citation and date/amount validation, bounded retries. No SLM connected yet |
+| Edge-case matrix (plan §4) | [data/test_manifests/edge_cases.yaml](data/test_manifests/edge_cases.yaml): EC-01–03, 07–09, 16 implemented; 16 pending |
 | Demo videos | [docs/demo_scripts/](docs/demo_scripts/): draft Marathi, Hindi, Odia scripts; no video produced yet |
 
 ## Development

@@ -77,24 +77,17 @@ else
 fi
 
 step "Downloading model weights (this can take a while)"
-"$VENV_VLLM/bin/python" - <<EOF
-from huggingface_hub import snapshot_download
-snapshot_download("$LLM_MODEL")
-print("ok: $LLM_MODEL")
-EOF
-"$VENV_APP/bin/python" - <<'EOF'
-from huggingface_hub import snapshot_download
-for repo in ["ai4bharat/indic-parler-tts", "ai4bharat/indic-conformer-600m-multilingual"]:
-    try:
-        snapshot_download(repo)
-        print("ok:", repo)
-    except Exception as exc:  # gated models need accepted terms + HF_TOKEN
-        print(f"FAILED: {repo}: {type(exc).__name__}: {exc}")
-        print(f"  -> open https://huggingface.co/{repo}, accept the terms, put HF_TOKEN=... in .env, re-run setup.sh")
-EOF
+models_ok=1
+bash scripts/gpu/download_models.sh || models_ok=0
 
 step "Running the test suite"
 "$VENV_APP/bin/python" -m pytest -q
 
-step "Setup complete"
-echo "Next: bash scripts/gpu/run_all.sh"
+if (( models_ok )); then
+  step "Setup complete"
+  echo "Next: bash scripts/gpu/run_all.sh"
+else
+  step "Setup INCOMPLETE: some models are blocked (see the instructions above)"
+  echo "After access is granted: bash scripts/gpu/download_models.sh, then bash scripts/gpu/run_all.sh"
+  exit 1
+fi

@@ -180,3 +180,20 @@ def test_answers_are_cached_per_question_and_refreshable(monkeypatch):
     monkeypatch.setattr(main.rt, "llm", FakeLLM(json.dumps({"claims": []})))
     refreshed = client.post("/api/v1/qa?refresh=true", json=q).json()
     assert refreshed["data"]["status"] == "insufficient_evidence"
+
+
+@pytest.mark.parametrize("served,status", [(["fake-model"], "ok"), (["Qwen/Qwen3-8B"], "unavailable")])
+def test_health_checks_the_served_model(monkeypatch, served, status):
+    # Seen on the GPU server: vLLM served Qwen3-8B while the app asked for Qwen3-4B -> HTTP 404.
+    import requests
+
+    from services.slm_orchestrator.llm import LLMConfig, OpenAICompatibleLLM
+
+    llm = OpenAICompatibleLLM(LLMConfig(base_url="http://gpu:8001/v1", model="fake-model"))
+    monkeypatch.setattr(main.rt, "llm", llm)
+    resp = type("R", (), {"status_code": 200, "json": lambda self: {"data": [{"id": m} for m in served]}})()
+    monkeypatch.setattr(requests, "get", lambda *a, **k: resp)
+    slm = next(d for d in client.get("/api/v1/health").json()["data"]["dependencies"] if d["name"] == "slm")
+    assert slm["status"] == status
+    if status != "ok":
+        assert "Qwen/Qwen3-8B" in slm["detail"]

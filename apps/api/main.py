@@ -174,10 +174,17 @@ def _llm_status() -> DependencyStatus:
         return DependencyStatus(name="slm", status="not_configured")
     import requests
     try:
-        ok = requests.get(f"{rt.llm.config.base_url}/models", timeout=5).status_code == 200
-    except requests.RequestException:
-        ok = False
-    return DependencyStatus(name="slm", status="ok" if ok else "unavailable", detail=rt.llm.model)
+        resp = requests.get(f"{rt.llm.config.base_url}/models", timeout=5)
+        served = [m.get("id") for m in resp.json().get("data", [])] if resp.status_code == 200 else None
+    except (requests.RequestException, ValueError):
+        served = None
+    if served is None:
+        return DependencyStatus(name="slm", status="unavailable", detail=rt.llm.model)
+    if rt.llm.model not in served:
+        # The server is up but serves a different model: every request would fail with 404.
+        return DependencyStatus(name="slm", status="unavailable",
+                                detail=f"configured {rt.llm.model}, but the server serves {', '.join(map(str, served))}")
+    return DependencyStatus(name="slm", status="ok", detail=rt.llm.model)
 
 
 @app.get(f"{API_PREFIX}/health", response_model=Envelope[Health])

@@ -29,19 +29,32 @@ wait_for() {  # url, seconds, name, logfile
 
 [[ -x "$VENV_APP/bin/python" && -x "$VENV_VLLM/bin/vllm" ]] || { echo "Run scripts/gpu/setup.sh first." >&2; exit 1; }
 
-step "Checking GPU memory"
-show_gpu_plan
-if (( LLM_FREE_MB < 10000 )) && [[ -z "${GPU_MEM_OVERRIDE:-}" ]]; then
-  echo "Not enough free GPU memory for the model right now (other jobs are using the GPUs)." >&2
-  echo "Check with: nvidia-smi. Retry when memory frees up, or force a choice in .env:" >&2
-  echo "  GPU_MEM_OVERRIDE=1  LLM_GPUS=<index>  GPU_MEM=<fraction>  LLM_MODEL=Qwen/Qwen3-4B" >&2
-  exit 1
-fi
+served_model() {  # the model id the running vLLM serves, or nothing
+  curl -fsS "$LLM_BASE_URL/models" 2>/dev/null \
+    | "$VENV_APP/bin/python" -c 'import json, sys; print(json.load(sys.stdin)["data"][0]["id"])' 2>/dev/null
+}
 
-step "Starting the model server: $LLM_MODEL (GPU $LLM_GPUS)"
-if curl -fsS -o /dev/null "$LLM_BASE_URL/models" 2>/dev/null; then
-  echo "already running"
+RUNNING_MODEL="$(served_model || true)"
+if [[ -n "$RUNNING_MODEL" ]]; then
+  # A previous run's vLLM is still up. Its own memory shows as "used" in nvidia-smi, so the
+  # free-memory plan is meaningless now: reuse the server and the model it actually serves.
+  step "Model server already running: $RUNNING_MODEL"
+  if [[ "$RUNNING_MODEL" != "$LLM_MODEL" ]]; then
+    echo "using the running model $RUNNING_MODEL (a fresh start would have chosen $LLM_MODEL)"
+  fi
+  export LLM_MODEL="$RUNNING_MODEL"
+  echo "Speech will run on GPU $APP_GPUS. To re-plan from scratch: bash scripts/gpu/stop_all.sh, then run this again."
 else
+  step "Checking GPU memory"
+  show_gpu_plan
+  if (( LLM_FREE_MB < 10000 )) && [[ -z "${GPU_MEM_OVERRIDE:-}" ]]; then
+    echo "Not enough free GPU memory for the model right now (other jobs are using the GPUs)." >&2
+    echo "Check with: nvidia-smi. Retry when memory frees up, or force a choice in .env:" >&2
+    echo "  GPU_MEM_OVERRIDE=1  LLM_GPUS=<index>  GPU_MEM=<fraction>  LLM_MODEL=Qwen/Qwen3-4B" >&2
+    exit 1
+  fi
+
+  step "Starting the model server: $LLM_MODEL (GPU $LLM_GPUS)"
   nohup "${VLLM_ENV[@]}" CUDA_VISIBLE_DEVICES="$LLM_GPUS" "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
     --dtype bfloat16 --max-model-len "$MAX_MODEL_LEN" --gpu-memory-utilization "$GPU_MEM" \
     --served-model-name "$LLM_MODEL" >"$LOGS/vllm.log" 2>&1 &

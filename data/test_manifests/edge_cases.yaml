@@ -1,0 +1,29 @@
+# Cross-system edge-case and failure-handling matrix (plan §4).
+# Each entry must eventually be backed by an automated test. The acceptance
+# suite reports every entry without an implemented test as skipped, so the
+# remaining gap stays visible.
+
+cases:
+  - {id: EC-01, workstream: A, scenario: GR source unavailable, behaviour: Show last successfully indexed version with retrieval date; indicate freshness could not be verified.}
+  - {id: EC-02, workstream: A, scenario: Duplicate document, behaviour: Deduplicate by content hash while retaining provenance for each official URL.}
+  - {id: EC-03, workstream: A, scenario: Revised PDF at same URL, behaviour: Detect content change, preserve previous version and reprocess the new one.}
+  - {id: EC-04, workstream: A, scenario: Amendment found, behaviour: Link to original only when evidence supports it; recalculate affected summaries.}
+  - {id: EC-05, workstream: C, scenario: Contradictory official documents, behaviour: Surface both sources and the conflict; do not invent a resolution.}
+  - {id: EC-06, workstream: B, scenario: OCR corruption in critical field, behaviour: Flag the field for review and withhold an unverified claim.}
+  - {id: EC-07, workstream: C, scenario: Retrieval finds no reliable evidence, behaviour: Explain that available documents do not establish the answer.}
+  - {id: EC-08, workstream: C, scenario: SLM hallucinates a citation, behaviour: Reject the citation unless it resolves to a real document and supporting passage.}
+  - {id: EC-09, workstream: C, scenario: Malformed SLM output, behaviour: Retry with constrained output once or twice, then return a safe failure response.}
+  - {id: EC-10, workstream: D, scenario: Unsupported language, behaviour: Ask the user to select a supported language; never silently switch.}
+  - {id: EC-11, workstream: D, scenario: Low-confidence STT, behaviour: Display transcript for correction or request another recording.}
+  - {id: EC-12, workstream: D, scenario: Ambiguous spoken amount or date, behaviour: Ask for confirmation before giving a consequential answer.}
+  - {id: EC-13, workstream: E, scenario: TTS API timeout, behaviour: Retry within a defined limit, then show text and an appropriate fallback.}
+  - {id: EC-14, workstream: E, scenario: Audio quality failure, behaviour: Suppress faulty audio and regenerate or route to review.}
+  - {id: EC-15, workstream: APP, scenario: Network disconnection, behaviour: Keep cached content available where feasible and mark it as possibly stale.}
+  - {id: EC-16, workstream: SEC, scenario: Malicious PDF or prompt injection, behaviour: Treat document content as untrusted; isolate parsing; ignore embedded override instructions.}
+  - {id: EC-17, workstream: SEC, scenario: Unauthorised access, behaviour: Deny access, log the security event, expose no document or user data.}
+  - {id: EC-18, workstream: APP, scenario: API quota exhaustion, behaviour: Apply rate limits, bounded retries and graceful degradation.}
+  - {id: EC-19, workstream: SEC, scenario: Personal information in logs, behaviour: Minimise or redact sensitive values and restrict access.}
+  - {id: EC-20, workstream: APP, scenario: Model or prompt update, behaviour: Run regression tests before deployment; keep versioned rollback.}
+  - {id: EC-21, workstream: C, scenario: User asks for a guaranteed benefit, behaviour: Explain documented rules and limitations; never guarantee an official outcome.}
+  - {id: EC-22, workstream: C, scenario: User asks for an action outside scope, behaviour: Explain the boundary and point to the relevant official channel if known.}
+  - {id: EC-23, workstream: DEMO, scenario: Client demo contains test data, behaviour: Label synthetic scenarios; never present invented information as an official decision.}

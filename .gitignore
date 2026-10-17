@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Secrets — never commit credentials
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# Government data dumps, recordings and model artefacts belong in approved
+# data/artefact stores, not in this repository (plan §6).
+data/raw/
+data/processed/
+data/indexes/
+*.pdf
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.mp4
+*.safetensors
+*.bin
+*.gguf
+*.onnx
+*.pt
+*.ckpt
+models/
+
+# Small, synthetic, clearly-labelled fixtures are allowed
+!data/fixtures/**
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

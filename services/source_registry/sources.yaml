@@ -1,0 +1,50 @@
+# Official source registry (Workstream A, task 1).
+#
+# Every entry starts unverified. A source becomes crawlable only after source
+# discovery (weeks 1–2) confirms the official URL AND the site's terms permit
+# automated reuse. Leave base_url null rather than guessing an address.
+
+sources:
+  - id: mh-gr-portal
+    state: MH
+    name: Maharashtra Government Resolutions portal
+    base_url: https://gr.maharashtra.gov.in
+    document_types: [GR, circular]
+    languages: [mr, en]
+    crawl_method: undecided   # http | browser | undecided
+    verified: false
+    terms_reviewed: false
+    notes: Primary GR source. Confirm pagination, search API and reuse terms.
+
+  - id: mp-department-portals
+    state: MP
+    name: Madhya Pradesh department portals
+    base_url: null
+    document_types: [order, circular, scheme_guideline]
+    languages: [hi, en]
+    crawl_method: undecided
+    verified: false
+    terms_reviewed: false
+    notes: Enumerate in-scope departments individually; one entry per department.
+
+  - id: od-egazette
+    state: OD
+    name: Odisha e-Gazette
+    base_url: null
+    document_types: [notification, gazette]
+    languages: [or, en]
+    crawl_method: undecided
+    verified: false
+    terms_reviewed: false
+    notes: Confirm official gazette URL during source discovery.
+
+  - id: od-department-portals
+    state: OD
+    name: Odisha department portals
+    base_url: null
+    document_types: [order, circular, scheme_guideline]
+    languages: [or, en]
+    crawl_method: undecided
+    verified: false
+    terms_reviewed: false
+    notes: Enumerate in-scope departments individually; one entry per department.

@@ -10,6 +10,8 @@
 #   were checked against the official PDF; the model's actual answers are what
 #   appear on screen, and the pipeline aborts if an answer's status does not
 #   match the narration (`expect`).
+# - "unknown" scenes ask for something the document does not contain (a deadline, required
+#   documents), so the correct behaviour is to decline rather than offer a related date.
 # - All regional text is a DRAFT pending native-speaker review.
 
 videos:
@@ -52,7 +54,7 @@ videos:
           माहिती तपासून पाहता येते.
       - id: unknown
         action: ask
-        question: हे नियम न पाळणाऱ्या रुग्णालयाला किती रुपये दंड आहे?
+        question: रुग्णालयांनी हे दरपत्रक कोणत्या तारखेपर्यंत लावायचे आहे?
         expect: insufficient_evidence
         narration: >-
           जी माहिती परिपत्रकात नाही, तिचा अंदाज लावला जात नाही. अशा वेळी प्रणाली स्पष्टपणे सांगते की
@@ -103,7 +105,7 @@ videos:
           जाँची जा सके।
       - id: unknown
         action: ask
-        question: न्यूनतम वेतन न देने पर नियोक्ता पर कितना जुर्माना लगेगा?
+        question: इन दरों का लाभ पाने के लिए श्रमिकों को कौन-से दस्तावेज़ जमा करने होंगे?
         expect: insufficient_evidence
         narration: >-
           जो जानकारी दस्तावेज़ में नहीं है, उसका अंदाज़ा नहीं लगाया जाता। ऐसे में प्रणाली साफ़ बताती है कि
@@ -153,7 +155,7 @@ videos:
           ତଥ୍ୟ ଯାଞ୍ଚ କରିହେବ।
       - id: unknown
         action: ask
-        question: ମଜୁରି ନ ଦେଲେ ନିଯୁକ୍ତିଦାତାଙ୍କୁ କେତେ ଜରିମାନା ହେବ?
+        question: ଏହି ମଜୁରି ପାଇବା ପାଇଁ ଶ୍ରମିକଙ୍କୁ କେଉଁ କାଗଜପତ୍ର ଦାଖଲ କରିବାକୁ ହେବ?
         expect: insufficient_evidence
         narration: >-
           ଯେଉଁ ତଥ୍ୟ ଦଲିଲରେ ନାହିଁ, ତାହା ଅନୁମାନ କରାଯାଏ ନାହିଁ। ଏପରି ସ୍ଥଳେ ପ୍ରଣାଳୀ ସ୍ପଷ୍ଟ କହେ ଯେ ଉପଲବ୍ଧ

@@ -41,6 +41,7 @@ def main() -> int:
 
     RAW.mkdir(parents=True, exist_ok=True)
     store = DocumentStore(STORE)
+    problems: list[str] = []
     for entry in load_manifest():
         if args.only and entry.id != args.only:
             continue
@@ -64,10 +65,22 @@ def main() -> int:
         render_page_images(pdf, CORPUS / entry.id)
         flagged = sum(len(p.untrusted) for p in doc.pages)
         origins = ",".join(sorted({p.origin for p in doc.pages}))
-        print(f"{entry.id}: {ingested.status}, {len(doc.pages)} pages ({origins}), "
+        chars = sum(len(p.text) for p in doc.pages)
+        confs = [p.ocr_mean_conf for p in doc.pages if p.ocr_mean_conf is not None]
+        conf = f", OCR confidence {sum(confs) / len(confs):.0f}%" if confs else ""
+        print(f"{entry.id}: {ingested.status}, {len(doc.pages)} pages ({origins}), {chars} characters{conf}, "
               f"{len(doc.passages)} passages, {flagged} untrusted numbers, {pending} review items awaiting sign-off "
               f"-> {path.relative_to(ROOT)}")
+        empty = [p.page for p in doc.pages if not p.text.strip()]
+        if empty:
+            problems.append(f"{entry.id}: no text extracted from page(s) {empty}")
     store.close()
+    if problems:
+        print("\nERROR: text extraction failed, so summaries and answers would have no evidence:", file=sys.stderr)
+        for line in problems:
+            print(f"  - {line}", file=sys.stderr)
+        print("Check that tesseract works: $TESSERACT_CMD --list-langs (must list mar, hin, ori, eng)", file=sys.stderr)
+        return 1
     return 0
 
 

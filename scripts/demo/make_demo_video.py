@@ -160,17 +160,36 @@ def preflight(api: Api, state: str, video: dict, allow_test_model: bool = False)
     summary = api.post("/summaries", {"document_id": doc["id"], "language": lang})
     if summary.get("error") or summary["data"]["status"] != "summarised":
         raise DemoAborted(f"summary failed: {summary.get('error')}")
-    answers = {}
+    stated = [s["key"] for s in summary["data"]["sections"] if s["status"] == "stated"]
+    print(f"  summary: {len(stated)} sections stated ({', '.join(stated)}), "
+          f"{summary['data']['removed_claims']} unsupported statements removed")
+
+    # Check every question scene before recording anything, and report all of them, so one run
+    # shows everything that needs attention. Model output varies slightly between calls, so a
+    # mismatch is retried once before it counts.
+    answers, problems = {}, []
     for scene in video["scenes"]:
         if scene["action"] != "ask":
             continue
-        r = api.post("/qa", {"question": scene["question"], "language": lang, "document_id": doc["id"]})
-        if r.get("error"):
-            raise DemoAborted(f"Q&A failed for {scene['id']}: {r['error']['message']}")
-        if r["data"]["status"] != scene["expect"]:
-            raise DemoAborted(f"scene {scene['id']}: answer status {r['data']['status']!r} contradicts narration "
-                              f"(expected {scene['expect']!r}); adjust the question or narration, then review")
+        for attempt in (1, 2):
+            # The second attempt bypasses the answer cache; the result is cached again, so the
+            # recording shows exactly the answer checked here.
+            path = "/qa" if attempt == 1 else "/qa?refresh=true"
+            r = api.post(path, {"question": scene["question"], "language": lang, "document_id": doc["id"]})
+            if r.get("error"):
+                raise DemoAborted(f"Q&A failed for {scene['id']}: {r['error']['message']}")
+            if r["data"]["status"] == scene["expect"]:
+                break
+        status = r["data"]["status"]
+        shown = " ".join(c["text"] for c in r["data"]["claims"]) or "; ".join(u["message"] for u in r["uncertainties"])
+        mark = "ok " if status == scene["expect"] else "MISMATCH"
+        print(f"  [{mark}] {scene['id']}: {scene['question']}\n         -> {status}: {shown[:300]}")
+        if status != scene["expect"]:
+            problems.append(f"scene {scene['id']}: got {status!r}, narration expects {scene['expect']!r}")
         answers[scene["id"]] = r
+    if problems:
+        raise DemoAborted("; ".join(problems) + ". Review the answers above; adjust the question in "
+                          "docs/demo_scripts/scenes.yaml if the model's answer is reasonable")
     return {"document": doc, "model": slm["detail"], "summary": summary, "answers": answers}
 
 

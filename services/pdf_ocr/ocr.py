@@ -78,8 +78,11 @@ class TesseractOcr:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "page.png"
             image.save(path)
+            # Ask for TSV with a parameter, not the "tsv" config name: config files live in
+            # tessdata/configs/, which minimal installs (only *.traineddata) do not have, and
+            # then tesseract silently falls back to plain text.
             proc = subprocess.run(
-                [self.cmd, str(path), "stdout", "-l", langs, "--psm", "3", "tsv"],
+                [self.cmd, str(path), "stdout", "-l", langs, "--psm", "3", "-c", "tessedit_create_tsv=1"],
                 capture_output=True, timeout=self.timeout, check=False,
             )
         if proc.returncode != 0:
@@ -89,6 +92,8 @@ class TesseractOcr:
 
 def parse_tsv(page: int, tsv: str) -> OcrPage:
     """Rebuild text (paragraphs and lines) from Tesseract TSV, keeping word offsets."""
+    if not tsv.startswith("level\tpage_num"):
+        raise OcrUnavailable(f"tesseract did not return TSV output (got: {tsv[:60]!r})")
     parts: list[str] = []
     words: list[OcrWord] = []
     pos = 0

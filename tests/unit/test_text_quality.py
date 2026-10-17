@@ -89,3 +89,13 @@ def test_parse_tsv_rebuilds_lines_and_offsets():
     assert page.text == "महाराष्ट्र शासन\n१६\n\nवाचा"
     w = page.words[2]
     assert page.text[w.start:w.end] == "१६" and w.conf == 60.0
+
+
+def test_plain_text_instead_of_tsv_is_an_error():
+    # Seen on the GPU server: without tessdata/configs, "tsv" silently produced plain text.
+    import pytest
+
+    from services.pdf_ocr.ocr import OcrUnavailable
+
+    with pytest.raises(OcrUnavailable, match="did not return TSV"):
+        parse_tsv(1, "आरोग्य सेवांमध्ये पारदर्शकता\nराज्यातील सर्व खाजगी")

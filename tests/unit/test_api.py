@@ -165,3 +165,18 @@ def test_api_key_enforced_on_post(monkeypatch):
     assert client.post("/api/v1/feedback", json={"kind": "other", "language": "hi"}).status_code == 401
     ok = client.post("/api/v1/feedback", json={"kind": "other", "language": "hi"}, headers={"X-API-Key": "secret"})
     assert ok.status_code == 200
+
+
+def test_answers_are_cached_per_question_and_refreshable(monkeypatch):
+    reply = json.dumps({"claims": [{"text": "अकुशल श्रमिक की दैनिक दर 484 रुपये है।", "citations": [f"{DOC_ID}:p1:1"]}]},
+                       ensure_ascii=False)
+    monkeypatch.setattr(main.rt, "llm", FakeLLM(reply))
+    q = {"question": "अकुशल श्रमिक की दैनिक दर", "language": "hi", "document_id": DOC_ID}
+    first = client.post("/api/v1/qa", json=q).json()
+    monkeypatch.setattr(main.rt, "llm", FakeLLM(exc=AssertionError("cache should be used")))
+    main.rt.llm.model = "fake-model"
+    spaced = client.post("/api/v1/qa", json={**q, "question": "  अकुशल  श्रमिक की दैनिक दर "}).json()
+    assert spaced["data"] == first["data"]
+    monkeypatch.setattr(main.rt, "llm", FakeLLM(json.dumps({"claims": []})))
+    refreshed = client.post("/api/v1/qa?refresh=true", json=q).json()
+    assert refreshed["data"]["status"] == "insufficient_evidence"

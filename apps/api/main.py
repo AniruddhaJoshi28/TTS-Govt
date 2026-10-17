@@ -366,26 +366,43 @@ class QaOut(BaseModel):
 
 
 @app.post(f"{API_PREFIX}/qa", response_model=Envelope[QaOut], dependencies=[Depends(require_key)])
-def question_answer(request: Request, body: QaRequest):
+def question_answer(request: Request, body: QaRequest, refresh: bool = False):
     if body.document_id:
-        index = rt.indexes.get(_doc(body.document_id).entry.id)
+        doc = _doc(body.document_id)
+        index = rt.indexes.get(doc.entry.id)
+        scope = doc.sha256
     else:
         if body.state is None:
             raise ApiError(400, "state_required", "Please choose a state or a document so the right orders are searched.")
-        passages = [p for d in rt.corpus.values() if d.entry.state == body.state for p in d.to_passages()]
-        index = BM25Index(passages)
+        docs = [d for d in rt.corpus.values() if d.entry.state == body.state]
+        index = BM25Index([p for d in docs for p in d.to_passages()])
+        scope = ",".join(sorted(d.sha256 for d in docs))
     llm = _require_llm()
+
+    # The same question about the same document version gets the same answer (also what makes
+    # recorded demos show exactly the answer that was checked). refresh=true asks again.
+    question = " ".join(body.question.split())
+    passages_n = len(index.passages)
+    key = hashlib.sha256(f"{scope}|{passages_n}|{body.language.value}|{llm.model}|{question}".encode()).hexdigest()[:24]
+    cache = CACHE_DIR / "answers" / f"{key}.json"
+    if cache.exists() and not refresh:
+        return JSONResponse({**json.loads(cache.read_text(encoding="utf-8")), "request_id": request.state.request_id})
+
     try:
-        result = answer(body.question, body.language, index, llm)
+        result = answer(question, body.language, index, llm)
     except LLMUnavailable as exc:
         raise ApiError(503, "model_unavailable", str(exc), retryable=True) from exc
-    return Envelope[QaOut](
+    env = Envelope[QaOut](
         request_id=request.state.request_id, language=body.language,
         data=QaOut(status=result.status, claims=[ClaimOut(**c.model_dump()) for c in result.claims],
                    model=llm.model, removed_claims=len(result.rejected)),
         sources=[_source(p) for p in result.sources],
         uncertainties=[Uncertainty(code="model_note", message=u) for u in result.uncertainties],
     )
+    if result.status != "failed":
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(env.model_dump_json(), encoding="utf-8")
+    return env
 
 
 # -- speech ------------------------------------------------------------------

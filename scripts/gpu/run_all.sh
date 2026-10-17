@@ -50,17 +50,23 @@ else
 fi
 
 step "Building the corpus from the official sources (download + OCR)"
-"$VENV_APP/bin/python" scripts/build_corpus.py --download
+"$VENV_APP/bin/python" scripts/build_corpus.py --download || { echo "Corpus build failed; see the errors above." >&2; exit 1; }
 
 step "Starting the application with TTS=$TTS_ENGINE, STT=$STT_ENGINE (GPU $APP_GPUS)"
-if curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/v1/health" 2>/dev/null; then
-  echo "already running"
-else
-  CUDA_VISIBLE_DEVICES="$APP_GPUS" nohup "$VENV_APP/bin/python" -m uvicorn apps.api.main:app \
-    --host 127.0.0.1 --port "$PORT" >"$LOGS/app.log" 2>&1 &
-  echo $! >"$LOGS/app.pid"
-  wait_for "http://127.0.0.1:$PORT/api/v1/health" 1800 app "$LOGS/app.log"
+# Always (re)start the app: it loads the corpus at startup, and the corpus was just rebuilt.
+if [[ -f "$LOGS/app.pid" ]] && kill -0 "$(cat "$LOGS/app.pid")" 2>/dev/null; then
+  echo "restarting the running app so it loads the rebuilt corpus"
+  kill "$(cat "$LOGS/app.pid")"
+  for _ in $(seq 1 30); do kill -0 "$(cat "$LOGS/app.pid")" 2>/dev/null || break; sleep 1; done
 fi
+if curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/v1/health" 2>/dev/null; then
+  echo "Port $PORT is still in use by another process (not started by this script). Stop it or set PORT in .env." >&2
+  exit 1
+fi
+CUDA_VISIBLE_DEVICES="$APP_GPUS" nohup "$VENV_APP/bin/python" -m uvicorn apps.api.main:app \
+  --host 127.0.0.1 --port "$PORT" >"$LOGS/app.log" 2>&1 &
+echo $! >"$LOGS/app.pid"
+wait_for "http://127.0.0.1:$PORT/api/v1/health" 1800 app "$LOGS/app.log"
 
 step "Health check"
 "$VENV_APP/bin/python" - "$PORT" <<'EOF'

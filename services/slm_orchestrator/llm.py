@@ -27,7 +27,7 @@ class LLMConfig(BaseModel):
     model: str = DEFAULT_MODEL
     api_key: str = "EMPTY"
     temperature: float = 0.1
-    max_tokens: int = 3072
+    max_tokens: int = 4096  # Indic scripts use many tokens per word
     timeout: float = 300.0
     # Qwen3: disable the reasoning trace so the reply is the JSON object only.
     extra_body: dict = {"chat_template_kwargs": {"enable_thinking": False}}

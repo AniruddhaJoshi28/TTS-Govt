@@ -49,3 +49,9 @@ output/
 
 # Voice references and consent records are personal data
 data/voices/*/
+
+# GPU server: environments, tools, logs
+.venvs/
+.tools/
+logs/
+data/demo/questions/

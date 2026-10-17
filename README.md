@@ -9,6 +9,17 @@ A government GR summariser and regional-language voice assistant for Maharashtra
 
 The full programme is in [docs/implementation-plan.md](docs/implementation-plan.md). To run it on a GPU server and record the demo videos, see [docs/operations/gpu-server.md](docs/operations/gpu-server.md).
 
+## Quick start on a GPU server
+
+```bash
+git clone https://github.com/AniruddhaJoshi28/TTS-Govt.git && cd TTS-Govt
+git checkout feature/foundation-and-ingestion
+bash scripts/gpu/setup.sh     # installs Python, OCR, vLLM, TTS, model weights; runs tests
+bash scripts/gpu/run_all.sh   # starts everything and records the 3 demo videos into output/demo/
+```
+
+Details, human checks before client delivery, and troubleshooting: [docs/operations/gpu-server.md](docs/operations/gpu-server.md).
+
 ## Status
 
 | Area | State |

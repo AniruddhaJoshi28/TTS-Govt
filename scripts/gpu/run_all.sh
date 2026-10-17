@@ -17,7 +17,10 @@ wait_for() {  # url, seconds, name, logfile
   for ((i = 0; i < secs; i += 5)); do
     curl -fsS -o /dev/null "$url" 2>/dev/null && { echo "$name is up"; return 0; }
     if [[ -f "$LOGS/$name.pid" ]] && ! kill -0 "$(cat "$LOGS/$name.pid")" 2>/dev/null; then
-      echo "$name exited; last log lines:" >&2; tail -40 "$log" >&2; return 1
+      echo "$name exited during startup. Error lines from $log:" >&2
+      grep -E "Error|ERROR|error:|out of memory|OutOfMemory|CUDA|insufficient|Free memory|not enough" "$log"         | grep -vE '^[[:space:]]+(File |\^|return |raise |with |async |self\.)' | tail -20 >&2
+      echo "(Full log: $log. Send it if the cause is not clear.)" >&2
+      return 1
     fi
     sleep 5
   done
@@ -25,6 +28,15 @@ wait_for() {  # url, seconds, name, logfile
 }
 
 [[ -x "$VENV_APP/bin/python" && -x "$VENV_VLLM/bin/vllm" ]] || { echo "Run scripts/gpu/setup.sh first." >&2; exit 1; }
+
+step "Checking GPU memory"
+show_gpu_plan
+if (( LLM_FREE_MB < 10000 )) && [[ -z "${GPU_MEM_OVERRIDE:-}" ]]; then
+  echo "Not enough free GPU memory for the model right now (other jobs are using the GPUs)." >&2
+  echo "Check with: nvidia-smi. Retry when memory frees up, or force a choice in .env:" >&2
+  echo "  GPU_MEM_OVERRIDE=1  LLM_GPUS=<index>  GPU_MEM=<fraction>  LLM_MODEL=Qwen/Qwen3-4B" >&2
+  exit 1
+fi
 
 step "Starting the model server: $LLM_MODEL (GPU $LLM_GPUS)"
 if curl -fsS -o /dev/null "$LLM_BASE_URL/models" 2>/dev/null; then

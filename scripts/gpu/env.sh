@@ -30,25 +30,45 @@ export TTS_ENGINE="${TTS_ENGINE:-parler}"
 export STT_ENGINE="${STT_ENGINE:-indicconformer}"
 
 # GPU layout. Two or more GPUs: model on GPU 0, speech on GPU 1.
-# One large GPU (>= 40 GB): share it. One smaller GPU: fall back to Qwen3-4B.
+# The choice uses memory that is FREE right now, because shared servers run other
+# people's jobs: vLLM refuses to start if (GPU_MEM x total) is more than what is free.
+#   - the model goes on the GPU with the most free memory;
+#   - speech (~8 GB) goes on the next GPU if it has room, otherwise shares;
+#   - GPU_MEM is sized to the free memory; the model shrinks if memory is short.
+GPU_COUNT=0
+GPU_TABLE=""
 if command -v nvidia-smi >/dev/null 2>&1; then
-  GPU_COUNT="$(nvidia-smi --query-gpu=index --format=csv,noheader | wc -l)"
-  GPU0_MB="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')"
-else
-  GPU_COUNT=0
-  GPU0_MB=0
+  GPU_TABLE="$(nvidia-smi --query-gpu=index,memory.total,memory.free --format=csv,noheader,nounits \
+    | tr -d ' ' | sort -t, -k3 -nr)"
+  GPU_COUNT="$(grep -c . <<<"$GPU_TABLE" || true)"
 fi
-export GPU_COUNT GPU0_MB
-if (( GPU_COUNT >= 2 )); then
-  export LLM_GPUS="${LLM_GPUS:-0}" APP_GPUS="${APP_GPUS:-1}"
-  export GPU_MEM="${GPU_MEM:-0.85}" MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
-  export LLM_MODEL="${LLM_MODEL:-Qwen/Qwen3-8B}"
-elif (( GPU0_MB >= 40000 )); then
-  export LLM_GPUS="${LLM_GPUS:-0}" APP_GPUS="${APP_GPUS:-0}"
-  export GPU_MEM="${GPU_MEM:-0.55}" MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
-  export LLM_MODEL="${LLM_MODEL:-Qwen/Qwen3-8B}"
-else
-  export LLM_GPUS="${LLM_GPUS:-0}" APP_GPUS="${APP_GPUS:-0}"
-  export GPU_MEM="${GPU_MEM:-0.60}" MAX_MODEL_LEN="${MAX_MODEL_LEN:-16384}"
-  export LLM_MODEL="${LLM_MODEL:-Qwen/Qwen3-4B}"
+export GPU_COUNT GPU_TABLE
+LLM_FREE_MB=0
+if (( GPU_COUNT > 0 )); then
+  IFS=, read -r B_IDX B_TOT B_FREE <<<"$(sed -n 1p <<<"$GPU_TABLE")"
+  APP_DEFAULT="$B_IDX"
+  RESERVE=8192
+  if (( GPU_COUNT >= 2 )); then
+    IFS=, read -r S_IDX S_TOT S_FREE <<<"$(sed -n 2p <<<"$GPU_TABLE")"
+    if (( S_FREE >= 9000 )); then APP_DEFAULT="$S_IDX"; RESERVE=0; fi
+  fi
+  LLM_FREE_MB=$(( B_FREE - RESERVE - 1536 ))
+  FRACTION="$(awk -v u="$LLM_FREE_MB" -v t="$B_TOT" 'BEGIN { f = u / t; if (f > 0.90) f = 0.90; if (f < 0) f = 0; printf "%.2f", f }')"
+  if (( LLM_FREE_MB >= 24000 )); then
+    MODEL_DEFAULT="Qwen/Qwen3-8B"; LEN_DEFAULT=32768
+  elif (( LLM_FREE_MB >= 19000 )); then
+    MODEL_DEFAULT="Qwen/Qwen3-8B"; LEN_DEFAULT=16384
+  else
+    MODEL_DEFAULT="Qwen/Qwen3-4B"; LEN_DEFAULT=16384
+  fi
+  export LLM_GPUS="${LLM_GPUS:-$B_IDX}" APP_GPUS="${APP_GPUS:-$APP_DEFAULT}"
+  export GPU_MEM="${GPU_MEM:-$FRACTION}"
+  export LLM_MODEL="${LLM_MODEL:-$MODEL_DEFAULT}" MAX_MODEL_LEN="${MAX_MODEL_LEN:-$LEN_DEFAULT}"
 fi
+export LLM_FREE_MB
+
+show_gpu_plan() {
+  echo "GPU memory right now (index, total MB, free MB):"
+  sed 's/^/  /' <<<"$GPU_TABLE"
+  echo "Plan: $LLM_MODEL on GPU $LLM_GPUS (GPU_MEM=$GPU_MEM, context $MAX_MODEL_LEN), speech on GPU $APP_GPUS"
+}

@@ -26,7 +26,7 @@ if (( GPU_COUNT == 0 )); then
   exit 1
 fi
 nvidia-smi --query-gpu=index,name,memory.total,driver_version --format=csv
-echo "Plan: model $LLM_MODEL on GPU(s) $LLM_GPUS (mem fraction $GPU_MEM), speech on GPU(s) $APP_GPUS"
+show_gpu_plan
 
 step "Installing uv (Python/package manager)"
 if ! command -v uv >/dev/null 2>&1; then

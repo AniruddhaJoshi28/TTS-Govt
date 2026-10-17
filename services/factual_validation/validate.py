@@ -1,16 +1,21 @@
 """Validates SLM output against the passages it cites (Workstream C, plan §4).
 
 A claim survives only if it cites at least one passage that was actually
-retrieved, and every date and rupee amount it states appears in those cited
-passages. Anything else is rejected, never repaired.
+retrieved, and every number, date and rupee amount it states appears in the
+trusted text of those cited passages. Numbers that OCR may have misread are
+masked out of the evidence first. Anything else is rejected, never repaired.
+
+Known gap: month names and number words ("ten thousand") are not checked.
 """
 
 import json
+import re
 from dataclasses import dataclass
 
 from pydantic import BaseModel, ValidationError
 
-from services.metadata_extraction.normalise import extract_amounts, extract_dates
+from services.metadata_extraction.critical import mask
+from services.metadata_extraction.normalise import extract_amounts, extract_dates, normalise_digits
 from services.retrieval.bm25 import Passage
 
 
@@ -42,9 +47,20 @@ class Validation:
 
 def parse(raw: str) -> ModelAnswer:
     try:
-        return ModelAnswer.model_validate(json.loads(raw))
+        return ModelAnswer.model_validate(json.loads(_strip_fences(raw)))
     except (json.JSONDecodeError, ValidationError) as exc:
         raise MalformedOutput(str(exc)) from exc
+
+
+def _strip_fences(raw: str) -> str:
+    """Accept a JSON object wrapped in a ```json fence; reject any other prose."""
+    s = raw.strip()
+    m = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", s, flags=re.S)
+    return m.group(1) if m else s
+
+
+def trusted_text(p: Passage) -> str:
+    return mask(p.text, list(p.untrusted))
 
 
 def validate(answer: ModelAnswer, retrieved: list[Passage]) -> Validation:
@@ -58,13 +74,19 @@ def validate(answer: ModelAnswer, retrieved: list[Passage]) -> Validation:
         if unknown:
             rejected.append(Rejected(claim, f"citation not in retrieved evidence: {unknown}"))
             continue
-        evidence = " ".join(by_id[c].text for c in claim.citations)
+        evidence = " ".join(trusted_text(by_id[c]) for c in claim.citations)
         missing = _unsupported_values(claim.text, evidence)
         if missing:
-            rejected.append(Rejected(claim, f"values not found in cited passages: {missing}"))
+            rejected.append(Rejected(claim, f"values not found in verified text of cited passages: {missing}"))
             continue
         accepted.append(claim)
     return Validation(accepted, rejected)
+
+
+def numbers(text: str) -> set[str]:
+    """Digit runs with grouping commas removed and leading zeros stripped."""
+    norm = re.sub(r"(?<=\d),(?=\d)", "", normalise_digits(text))
+    return {n.lstrip("0") or "0" for n in re.findall(r"\d+", norm)}
 
 
 def _unsupported_values(claim: str, evidence: str) -> list[str]:
@@ -72,4 +94,5 @@ def _unsupported_values(claim: str, evidence: str) -> list[str]:
     ev_amounts = {a.value for a in extract_amounts(evidence)}
     missing = [d.raw for d in extract_dates(claim) if d.value not in ev_dates]
     missing += [a.raw for a in extract_amounts(claim) if a.value not in ev_amounts]
-    return missing
+    missing += sorted(numbers(claim) - numbers(evidence), key=int)
+    return list(dict.fromkeys(missing))

@@ -97,7 +97,76 @@ def ec16_prompt_injection(tmp_path: Path):
     assert prompt.count("PASSAGE>>>") == 1  # passage cannot close its own delimiter
 
 
+def ec06_ocr_corruption_in_critical_field(tmp_path: Path):
+    from datetime import datetime, timezone
+
+    from services.document_ingestion.corpus import build_document
+    from tests.helpers import make_pdf
+    from tests.unit.test_corpus import FakeOcr, entry
+
+    # "01.10.2026" misread as "0।.0.2026" and a low-confidence wage figure.
+    ocr = FakeOcr("दिनांक 0।.0.2026 से अकुशल श्रमिक दैनिक दर 484 रुपये", low_conf_word="484")
+    doc = build_document(entry(portal_metadata={}), make_pdf(None), "ab" * 32,
+                         datetime(2026, 10, 17, tzinfo=timezone.utc), ocr)
+    index = BM25Index(doc.to_passages())
+    pid = doc.to_passages()[0].passage_id
+    raw = json.dumps({"claims": [{"text": "अकुशल श्रमिक को 484 रुपये प्रतिदिन, 01.10.2026 से", "citations": [pid]}]},
+                     ensure_ascii=False)
+    r = answer("अकुशल श्रमिक दैनिक दर", Language.HINDI, index, lambda _: raw)
+    assert r.status == "insufficient_evidence" and "verified text" in r.rejected[0].reason
+
+
+def ec10_unsupported_language(tmp_path: Path):
+    from fastapi.testclient import TestClient
+
+    from apps.api.main import app
+    from services.stt.service import AudioRejected, transcribe
+
+    resp = TestClient(app).post("/api/v1/qa", json={"question": "திட்டம் என்ன?", "language": "ta", "state": "MH"})
+    assert resp.status_code == 422 and resp.json()["error"]["code"] == "invalid_request"
+    with pytest.raises(AudioRejected, match="Marathi, Hindi and Odia"):
+        transcribe(b"", "ta", engine=None)
+
+
+def ec13_tts_outage_falls_back_to_text(tmp_path: Path):
+    from fastapi.testclient import TestClient
+
+    import apps.api.main as main
+
+    saved = main.rt.tts
+    main.rt.tts = None
+    try:
+        body = TestClient(main.app).post("/api/v1/speech/synthesis", json={"text": "नमस्कार", "language": "mr"}).json()
+    finally:
+        main.rt.tts = saved
+    assert body["error"]["code"] == "tts_unavailable" and "text answer is still valid" in body["error"]["message"]
+
+
+def ec14_audio_quality_failure(tmp_path: Path):
+    from services.tts.service import AudioQualityError, synthesize
+    from tests.unit.test_speech import FakeEngine
+
+    engine = FakeEngine(seconds_per_char=0.001)  # always truncated
+    with pytest.raises(AudioQualityError):
+        synthesize("रुग्णालयांनी दर मराठी आणि इंग्रजीत लावावेत.", "mr", engine)
+    assert engine.calls == 2  # regenerated once, then suppressed
+
+
+def ec23_demo_test_material_is_labelled(tmp_path: Path):
+    from tests.unit.test_demo_pipeline import demo
+
+    assert demo.STUB_MODEL.search("UI-TEST-STUB")
+    assert "NOT FOR DISTRIBUTION" in demo.TEST_LABEL
+    scenes = yaml.safe_load((Path(__file__).parents[2] / "docs/demo_scripts/scenes.yaml").read_text(encoding="utf-8"))
+    assert all("AI" in v["label"] for v in scenes["videos"].values())
+
+
 IMPLEMENTED = {
+    "EC-06": ec06_ocr_corruption_in_critical_field,
+    "EC-10": ec10_unsupported_language,
+    "EC-13": ec13_tts_outage_falls_back_to_text,
+    "EC-14": ec14_audio_quality_failure,
+    "EC-23": ec23_demo_test_material_is_labelled,
     "EC-01": ec01_source_unavailable_keeps_last_version,
     "EC-02": ec02_duplicate_document,
     "EC-03": ec03_revised_pdf_at_same_url,

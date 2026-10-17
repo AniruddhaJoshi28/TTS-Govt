@@ -1,22 +1,107 @@
-"""API gateway. Implements the proposed /api/v1 contracts from plan §5.
+"""API gateway implementing the /api/v1 contracts from plan §5, plus the web UI.
 
-Only /health is functional. All other endpoints answer 501 with a structured
-error so clients can integrate against the contract before the services exist,
-and so nothing ever returns a fabricated result.
+Configuration (environment variables):
+    CORPUS_DIR     built corpus (default data/corpus)
+    LLM_BASE_URL   OpenAI-compatible model server, e.g. http://gpu-host:8000/v1
+    LLM_MODEL      model name served there (default Qwen/Qwen3-8B)
+    TTS_ENGINE     "parler" to load Indic Parler-TTS, or "clone:<voice_id>" (consent required)
+    STT_ENGINE     "indicconformer" to load IndicConformer
+    API_KEY        if set, required as X-API-Key on every POST
+
+Nothing here fabricates output: when a model is not configured or fails, the
+endpoint returns an explicit error envelope.
 """
 
+import hashlib
+import json
+import os
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, Header, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
-from schemas.api.envelope import Envelope, ErrorDetail, Language
+from schemas.api.envelope import Envelope, ErrorDetail, Language, SourceRef, State, Uncertainty
+from services.document_ingestion.corpus import CorpusDocument, load_corpus
+from services.document_ingestion.manifest import DocumentEntry
+from services.retrieval.bm25 import BM25Index, Passage
+from services.slm_orchestrator.answer import answer
+from services.slm_orchestrator.llm import LLMConfig, LLMUnavailable, OpenAICompatibleLLM
+from services.slm_orchestrator.summarise import summarise
 
+ROOT = Path(__file__).resolve().parents[2]
 API_PREFIX = "/api/v1"
+WEB_DIR = ROOT / "apps" / "web"
+CACHE_DIR = ROOT / "data" / "cache"
+FEEDBACK_FILE = ROOT / "data" / "feedback" / "feedback.jsonl"
+MAX_AUDIO_BYTES = 10 * 1024 * 1024
 
-app = FastAPI(title="Government GR Assistant API", version="0.1.0")
+class ApiError(Exception):
+    def __init__(self, status: int, code: str, message: str, retryable: bool = False):
+        self.status, self.code, self.message, self.retryable = status, code, message, retryable
 
+
+# -- runtime state -----------------------------------------------------------
+
+class Runtime:
+    def __init__(self):
+        self.corpus_dir = Path(os.environ.get("CORPUS_DIR", ROOT / "data" / "corpus"))
+        self.corpus: dict[str, CorpusDocument] = {}
+        self.indexes: dict[str, BM25Index] = {}
+        cfg = LLMConfig.from_env()
+        self.llm = OpenAICompatibleLLM(cfg) if cfg else None
+        self.tts = None
+        self.tts_error: str | None = None
+        self.stt = None
+        self.stt_error: str | None = None
+        self.jobs: dict[str, dict] = {}
+        self.pool = ThreadPoolExecutor(max_workers=1)  # one GPU, one synthesis at a time
+        self.lock = threading.Lock()
+        self.reload()
+
+    def reload(self) -> None:
+        self.corpus = load_corpus(self.corpus_dir) if self.corpus_dir.exists() else {}
+        self.indexes = {doc_id: BM25Index(doc.to_passages()) for doc_id, doc in self.corpus.items()}
+
+    def load_speech(self) -> None:
+        tts = os.environ.get("TTS_ENGINE", "")
+        try:
+            if tts == "parler":
+                from services.tts.engines import IndicParlerTTS
+                self.tts = IndicParlerTTS()
+            elif tts.startswith("clone:"):
+                from services.tts.engines import IndicF5Clone
+                self.tts = IndicF5Clone(tts.split(":", 1)[1])
+        except Exception as exc:  # report, don't crash the API
+            self.tts_error = f"{type(exc).__name__}: {exc}"
+        if os.environ.get("STT_ENGINE") == "indicconformer":
+            try:
+                from services.stt.service import IndicConformerSTT
+                self.stt = IndicConformerSTT()
+            except Exception as exc:
+                self.stt_error = f"{type(exc).__name__}: {exc}"
+
+
+rt = Runtime()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    rt.load_speech()
+    yield
+
+
+app = FastAPI(title="Government GR Assistant API", version="0.2.0", lifespan=lifespan)
+
+
+# -- plumbing ----------------------------------------------------------------
 
 @app.middleware("http")
 async def assign_request_id(request: Request, call_next):
@@ -31,9 +116,52 @@ async def assign_request_id(request: Request, call_next):
     return response
 
 
+def _error_body(request: Request, code: str, message: str, retryable: bool = False, language=Language.ENGLISH):
+    return Envelope[None](request_id=request.state.request_id, language=language,
+                          error=ErrorDetail(code=code, message=message, retryable=retryable)).model_dump(mode="json")
+
+
+@app.exception_handler(ApiError)
+async def _api_error(request: Request, exc: ApiError):
+    return JSONResponse(status_code=exc.status, content=_error_body(request, exc.code, exc.message, exc.retryable))
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error(request: Request, exc: RequestValidationError):
+    fields = ", ".join(".".join(str(p) for p in e["loc"][1:]) for e in exc.errors())
+    return JSONResponse(status_code=422, content=_error_body(request, "invalid_request", f"Invalid fields: {fields}"))
+
+
+def require_key(x_api_key: str | None = Header(default=None)) -> None:
+    expected = os.environ.get("API_KEY")
+    if expected and x_api_key != expected:
+        raise ApiError(401, "unauthorised", "A valid API key is required.")
+
+
+def _doc(doc_id: str) -> CorpusDocument:
+    doc = rt.corpus.get(doc_id)
+    if doc is None:
+        raise ApiError(404, "document_not_found", "No document with this id is in the corpus.")
+    return doc
+
+
+def _source(p: Passage) -> SourceRef:
+    return SourceRef(document_id=p.document_id, version_id=p.version_id, url=p.url,
+                     page=p.page or None, passage_id=p.passage_id)
+
+
+def _require_llm():
+    if rt.llm is None:
+        raise ApiError(503, "model_not_configured", "The language model server is not configured (LLM_BASE_URL).")
+    return rt.llm
+
+
+# -- health ------------------------------------------------------------------
+
 class DependencyStatus(BaseModel):
     name: str
     status: str  # "ok" | "unavailable" | "not_configured"
+    detail: str | None = None
 
 
 class Health(BaseModel):
@@ -41,44 +169,340 @@ class Health(BaseModel):
     dependencies: list[DependencyStatus]
 
 
-# Dependencies the product relies on; each reports "not_configured" until wired up.
-DEPENDENCIES = ["postgres", "object_storage", "bm25_index", "vector_index", "slm", "stt", "tts"]
+def _llm_status() -> DependencyStatus:
+    if rt.llm is None:
+        return DependencyStatus(name="slm", status="not_configured")
+    import requests
+    try:
+        ok = requests.get(f"{rt.llm.config.base_url}/models", timeout=5).status_code == 200
+    except requests.RequestException:
+        ok = False
+    return DependencyStatus(name="slm", status="ok" if ok else "unavailable", detail=rt.llm.model)
 
 
 @app.get(f"{API_PREFIX}/health", response_model=Envelope[Health])
-async def health(request: Request) -> Envelope[Health]:
-    deps = [DependencyStatus(name=name, status="not_configured") for name in DEPENDENCIES]
+def health(request: Request) -> Envelope[Health]:
+    from services.pdf_ocr.ocr import OcrUnavailable, find_tesseract
+    try:
+        find_tesseract()
+        ocr = DependencyStatus(name="ocr", status="ok")
+    except OcrUnavailable:
+        ocr = DependencyStatus(name="ocr", status="not_configured")
+    deps = [
+        DependencyStatus(name="corpus", status="ok" if rt.corpus else "not_configured",
+                         detail=f"{len(rt.corpus)} documents"),
+        ocr,
+        _llm_status(),
+        DependencyStatus(name="tts", status="ok" if rt.tts else ("unavailable" if rt.tts_error else "not_configured"),
+                         detail=rt.tts_error),
+        DependencyStatus(name="stt", status="ok" if rt.stt else ("unavailable" if rt.stt_error else "not_configured"),
+                         detail=rt.stt_error),
+    ]
     overall = "ok" if all(d.status == "ok" for d in deps) else "degraded"
-    return Envelope[Health](
-        request_id=request.state.request_id,
-        language=Language.ENGLISH,
-        data=Health(status=overall, dependencies=deps),
+    return Envelope[Health](request_id=request.state.request_id, language=Language.ENGLISH,
+                            data=Health(status=overall, dependencies=deps))
+
+
+# -- documents ---------------------------------------------------------------
+
+class DocumentSummary(BaseModel):
+    id: str
+    state: State
+    language: Language
+    document_type: str
+    issued: str
+    department: str
+    department_en: str
+    title: str
+    title_en: str
+    url: str
+    listing_url: str
+    retrieved_at: str
+    sha256: str
+    pages: int
+    text_origins: list[str]
+    untrusted_numbers: int
+    reviewed_passages: int
+
+
+def _summary_of(doc: CorpusDocument) -> DocumentSummary:
+    e: DocumentEntry = doc.entry
+    return DocumentSummary(
+        id=e.id, state=e.state, language=e.language, document_type=e.document_type, issued=e.issued.isoformat(),
+        department=e.department, department_en=e.department_en, title=e.title, title_en=e.title_en,
+        url=str(e.url), listing_url=str(e.listing_url), retrieved_at=doc.retrieved_at.isoformat(),
+        sha256=doc.sha256, pages=len(doc.pages), text_origins=sorted({p.origin for p in doc.pages}),
+        untrusted_numbers=sum(len(p.untrusted) for p in doc.pages),
+        reviewed_passages=sum(1 for p in doc.passages if p["origin"] == "reviewed"),
     )
 
 
-def _not_implemented(request: Request, service: str) -> JSONResponse:
-    body = Envelope[None](
-        request_id=request.state.request_id,
-        language=Language.ENGLISH,
-        error=ErrorDetail(code="not_implemented", message=f"The {service} service is not available yet."),
+@app.get(f"{API_PREFIX}/documents", response_model=Envelope[list[DocumentSummary]])
+def list_documents(request: Request, state: State | None = None, language: Language | None = None,
+                   q: str | None = Query(default=None, max_length=200)):
+    docs = [d for d in rt.corpus.values()
+            if (state is None or d.entry.state == state) and (language is None or d.entry.language == language)]
+    if q:
+        hits = {h.passage.document_id for d in docs for h in rt.indexes[d.entry.id].search(q, k=3)}
+        docs = [d for d in docs if d.entry.id in hits]
+    return Envelope[list[DocumentSummary]](request_id=request.state.request_id, language=language or Language.ENGLISH,
+                                           data=[_summary_of(d) for d in docs])
+
+
+class PageOut(BaseModel):
+    page: int
+    origin: str
+    reason: str | None
+    text: str
+    ocr_mean_conf: float | None
+    untrusted: list[tuple[int, int]]
+
+
+class PassageOut(BaseModel):
+    passage_id: str
+    page: int
+    origin: str
+    text: str
+    untrusted: list[tuple[int, int]]
+
+
+class DocumentDetail(BaseModel):
+    document: DocumentSummary
+    portal_metadata: dict[str, str]
+    pages: list[PageOut]
+    passages: list[PassageOut]
+
+
+@app.get(f"{API_PREFIX}/documents/{{document_id}}", response_model=Envelope[DocumentDetail])
+def get_document(request: Request, document_id: str):
+    doc = _doc(document_id)
+    detail = DocumentDetail(
+        document=_summary_of(doc), portal_metadata=doc.entry.portal_metadata,
+        pages=[PageOut(**p.model_dump(exclude={"corrected"})) for p in doc.pages],
+        passages=[PassageOut(**{k: p[k] for k in PassageOut.model_fields}) for p in doc.passages],
     )
-    return JSONResponse(status_code=501, content=body.model_dump(mode="json"))
+    return Envelope[DocumentDetail](request_id=request.state.request_id, language=doc.entry.language, data=detail)
 
 
-PLANNED_ROUTES = [
-    ("GET", "/documents", "document search"),
-    ("GET", "/documents/{document_id}", "document details"),
-    ("POST", "/summaries", "summary"),
-    ("POST", "/qa", "question answering"),
-    ("POST", "/speech/transcriptions", "speech transcription"),
-    ("POST", "/speech/synthesis", "speech synthesis"),
-    ("GET", "/audio-assets/{asset_id}", "audio library"),
-    ("POST", "/feedback", "feedback"),
-]
+@app.get(f"{API_PREFIX}/documents/{{document_id}}/pages/{{page}}.png")
+def page_image(document_id: str, page: int):
+    _doc(document_id)
+    path = rt.corpus_dir / document_id / f"page-{page}.png"
+    if page < 1 or not path.is_file():
+        raise ApiError(404, "page_not_found", "No image for this page.")
+    return FileResponse(path, media_type="image/png")
 
-for method, path, service in PLANNED_ROUTES:
 
-    def _handler(request: Request, _service: str = service) -> JSONResponse:
-        return _not_implemented(request, _service)
+# -- summaries and Q&A -------------------------------------------------------
 
-    app.add_api_route(f"{API_PREFIX}{path}", _handler, methods=[method], status_code=501)
+class ClaimOut(BaseModel):
+    text: str
+    citations: list[str]
+
+
+class SectionOut(BaseModel):
+    key: str
+    status: str
+    claims: list[ClaimOut]
+
+
+class SummaryOut(BaseModel):
+    document_id: str
+    status: str
+    sections: list[SectionOut]
+    model: str
+    generated_at: str
+    removed_claims: int
+
+
+class SummaryRequest(BaseModel):
+    document_id: str = Field(max_length=200)
+    language: Language
+
+
+@app.post(f"{API_PREFIX}/summaries", response_model=Envelope[SummaryOut], dependencies=[Depends(require_key)])
+def create_summary(request: Request, body: SummaryRequest, refresh: bool = False):
+    doc = _doc(body.document_id)
+    llm = _require_llm()
+    key = hashlib.sha256(f"{doc.sha256}|{body.language.value}|{llm.model}|{len(doc.passages)}".encode()).hexdigest()[:24]
+    cache = CACHE_DIR / "summaries" / f"{key}.json"
+    if cache.exists() and not refresh:
+        return JSONResponse({**json.loads(cache.read_text(encoding="utf-8")), "request_id": request.state.request_id})
+
+    passages = doc.to_passages()
+    try:
+        result = summarise(passages, body.language, llm)
+    except LLMUnavailable as exc:
+        raise ApiError(503, "model_unavailable", str(exc), retryable=True) from exc
+    out = SummaryOut(
+        document_id=doc.entry.id, status=result.status, model=llm.model,
+        generated_at=datetime.now(timezone.utc).isoformat(), removed_claims=len(result.rejected),
+        sections=[SectionOut(key=s.key, status=s.status, claims=[ClaimOut(**c.model_dump()) for c in s.claims])
+                  for s in result.sections],
+    )
+    env = Envelope[SummaryOut](
+        request_id=request.state.request_id, language=body.language, data=out,
+        sources=[_source(p) for p in result.sources],
+        uncertainties=[Uncertainty(code="model_note", message=u) for u in result.uncertainties],
+    )
+    if result.status == "summarised":
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(env.model_dump_json(), encoding="utf-8")
+    return env
+
+
+class QaRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=500)
+    language: Language
+    document_id: str | None = Field(default=None, max_length=200)
+    state: State | None = None
+
+
+class QaOut(BaseModel):
+    status: str
+    claims: list[ClaimOut]
+    model: str
+    removed_claims: int
+
+
+@app.post(f"{API_PREFIX}/qa", response_model=Envelope[QaOut], dependencies=[Depends(require_key)])
+def question_answer(request: Request, body: QaRequest):
+    if body.document_id:
+        index = rt.indexes.get(_doc(body.document_id).entry.id)
+    else:
+        if body.state is None:
+            raise ApiError(400, "state_required", "Please choose a state or a document so the right orders are searched.")
+        passages = [p for d in rt.corpus.values() if d.entry.state == body.state for p in d.to_passages()]
+        index = BM25Index(passages)
+    llm = _require_llm()
+    try:
+        result = answer(body.question, body.language, index, llm)
+    except LLMUnavailable as exc:
+        raise ApiError(503, "model_unavailable", str(exc), retryable=True) from exc
+    return Envelope[QaOut](
+        request_id=request.state.request_id, language=body.language,
+        data=QaOut(status=result.status, claims=[ClaimOut(**c.model_dump()) for c in result.claims],
+                   model=llm.model, removed_claims=len(result.rejected)),
+        sources=[_source(p) for p in result.sources],
+        uncertainties=[Uncertainty(code="model_note", message=u) for u in result.uncertainties],
+    )
+
+
+# -- speech ------------------------------------------------------------------
+
+class SynthesisRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=3000)
+    language: Language
+    speaker: str | None = Field(default=None, max_length=40)
+
+
+class SynthesisJob(BaseModel):
+    job_id: str
+    status: str  # "queued" | "running" | "done" | "failed"
+    synthetic: bool = True
+    model: str | None = None
+    voice: str | None = None
+    duration_s: float | None = None
+    error: str | None = None
+
+
+def _run_synthesis(job_id: str, req: SynthesisRequest) -> None:
+    from services.tts.service import AudioQualityError, synthesize
+    job = rt.jobs[job_id]
+    job["status"] = "running"
+    try:
+        result = synthesize(req.text, req.language.value, rt.tts, req.speaker)
+    except AudioQualityError as exc:
+        job.update(status="failed", error=str(exc))
+        return
+    except Exception as exc:  # engine crash: report, never substitute other audio
+        job.update(status="failed", error=f"synthesis error: {type(exc).__name__}")
+        return
+    job.update(status="done", model=result.model, voice=result.voice, duration_s=round(result.duration_s, 2),
+               wav=result.wav)
+
+
+@app.post(f"{API_PREFIX}/speech/synthesis", response_model=Envelope[SynthesisJob], status_code=202,
+          dependencies=[Depends(require_key)])
+def create_synthesis(request: Request, body: SynthesisRequest):
+    if rt.tts is None:
+        raise ApiError(503, "tts_unavailable", "Speech synthesis is not available. The text answer is still valid.",
+                       retryable=bool(rt.tts_error))
+    job_id = uuid.uuid4().hex
+    rt.jobs[job_id] = {"status": "queued"}
+    rt.pool.submit(_run_synthesis, job_id, body)
+    return Envelope[SynthesisJob](request_id=request.state.request_id, language=body.language,
+                                  data=SynthesisJob(job_id=job_id, status="queued"))
+
+
+@app.get(f"{API_PREFIX}/speech/synthesis/{{job_id}}", response_model=Envelope[SynthesisJob])
+def synthesis_status(request: Request, job_id: str):
+    job = rt.jobs.get(job_id)
+    if job is None:
+        raise ApiError(404, "job_not_found", "Unknown synthesis job.")
+    data = SynthesisJob(job_id=job_id, **{k: v for k, v in job.items() if k != "wav"})
+    return Envelope[SynthesisJob](request_id=request.state.request_id, language=Language.ENGLISH, data=data)
+
+
+@app.get(f"{API_PREFIX}/speech/synthesis/{{job_id}}/audio")
+def synthesis_audio(job_id: str):
+    job = rt.jobs.get(job_id)
+    if not job or job.get("status") != "done":
+        raise ApiError(404, "audio_not_ready", "Audio is not available for this job.")
+    return Response(job["wav"], media_type="audio/wav", headers={"X-Synthetic-Speech": "true"})
+
+
+class TranscriptOut(BaseModel):
+    text: str
+    duration_s: float
+    model: str
+    needs_confirmation: bool
+
+
+@app.post(f"{API_PREFIX}/speech/transcriptions", response_model=Envelope[TranscriptOut],
+          dependencies=[Depends(require_key)])
+async def create_transcription(request: Request, language: Language):
+    from services.stt.service import AudioRejected, transcribe
+    if rt.stt is None:
+        raise ApiError(503, "stt_unavailable", "Speech recognition is not available. Please type your question.")
+    data = await request.body()
+    if len(data) > MAX_AUDIO_BYTES:
+        raise ApiError(413, "audio_too_large", "The recording is too large.")
+    try:
+        t = transcribe(data, language.value, rt.stt)
+    except AudioRejected as exc:
+        raise ApiError(422, "audio_rejected", str(exc)) from exc
+    return Envelope[TranscriptOut](request_id=request.state.request_id, language=language,
+                                   data=TranscriptOut(text=t.text, duration_s=round(t.duration_s, 2), model=t.model,
+                                                      needs_confirmation=True))
+
+
+# -- audio library and feedback ---------------------------------------------
+
+@app.get(f"{API_PREFIX}/audio-assets/{{asset_id}}")
+def audio_asset(asset_id: str):
+    raise ApiError(404, "audio_asset_not_found",
+                   "No approved human recording exists for this item yet. Recordings are added after script approval.")
+
+
+class FeedbackRequest(BaseModel):
+    document_id: str | None = Field(default=None, max_length=200)
+    kind: str = Field(pattern="^(incorrect|unclear|helpful|pronunciation|other)$")
+    comment: str = Field(default="", max_length=1000)
+    language: Language
+
+
+@app.post(f"{API_PREFIX}/feedback", response_model=Envelope[dict], dependencies=[Depends(require_key)])
+def feedback(request: Request, body: FeedbackRequest):
+    FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    record = {**body.model_dump(mode="json"), "at": datetime.now(timezone.utc).isoformat(),
+              "request_id": request.state.request_id}
+    with rt.lock, FEEDBACK_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return Envelope[dict](request_id=request.state.request_id, language=body.language, data={"received": True})
+
+
+# -- web UI ------------------------------------------------------------------
+
+if WEB_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

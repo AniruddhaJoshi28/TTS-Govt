@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="mr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>शासन निर्णय सहाय्यक</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="emblem" aria-hidden="true">📜</span>
+      <div>
+        <div class="brand-name" data-i18n="appName"></div>
+        <div class="brand-tag" data-i18n="tagline"></div>
+      </div>
+    </div>
+    <label class="lang">
+      <span data-i18n="language"></span>
+      <select id="language" data-testid="language">
+        <option value="mr">मराठी</option>
+        <option value="hi">हिंदी</option>
+        <option value="or">ଓଡ଼ିଆ</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+  </header>
+
+  <nav class="states" role="tablist" aria-label="State">
+    <button role="tab" data-state="MH" data-testid="state-MH">महाराष्ट्र</button>
+    <button role="tab" data-state="MP" data-testid="state-MP">मध्य प्रदेश</button>
+    <button role="tab" data-state="OD" data-testid="state-OD">ଓଡ଼ିଶା</button>
+  </nav>
+
+  <main class="layout">
+    <section class="col-main">
+      <article id="doc-card" class="card doc-card" data-testid="doc-card" aria-live="polite"></article>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 data-i18n="summaryTitle"></h2>
+          <button id="btn-summary" class="btn primary" data-testid="btn-summary" data-i18n="summaryButton"></button>
+        </div>
+        <div id="summary" data-testid="summary" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="askTitle"></h2>
+        <form id="ask-form" class="ask" autocomplete="off">
+          <textarea id="question" data-testid="question" rows="2" maxlength="500"></textarea>
+          <div class="ask-actions">
+            <button type="button" id="btn-mic" class="btn" data-testid="btn-mic">
+              <span aria-hidden="true">🎙️</span> <span data-i18n="speak"></span>
+            </button>
+            <button type="submit" id="btn-ask" class="btn primary" data-testid="btn-ask" data-i18n="ask"></button>
+          </div>
+          <p id="mic-status" class="hint" aria-live="polite"></p>
+        </form>
+        <div id="answer" data-testid="answer" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <aside class="col-side card" id="source-panel" data-testid="source-panel" aria-live="polite">
+      <h2 data-i18n="sourceTitle"></h2>
+      <div id="source-body" class="source-body"><p class="muted" data-i18n="sourceHint"></p></div>
+    </aside>
+  </main>
+
+  <footer class="footer" data-i18n="disclaimer"></footer>
+  <script src="app.js"></script>
+</body>
+</html>

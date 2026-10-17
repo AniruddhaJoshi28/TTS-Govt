@@ -1,21 +1,35 @@
-# Demo video scripts
+# Demo videos
 
-Status: **DRAFT scripts. No video produced yet.**
+[scenes.yaml](scenes.yaml) is the script for all three regional videos and the input to `scripts/demo/make_demo_video.py`.
 
-| File | Video | Audience | Status |
-| --- | --- | --- | --- |
-| [marathi.md](marathi.md) | Video 1: Marathi explainer | Maharashtra | Draft, awaiting native-speaker review |
-| [hindi.md](hindi.md) | Video 2: Hindi explainer | Madhya Pradesh | Draft, awaiting native-speaker review |
-| [odia.md](odia.md) | Video 3: Odia explainer | Odisha | Draft, needs a thorough native Odia rewrite |
+| Video | Document shown (official source) | Narration |
+| --- | --- | --- |
+| Marathi, Maharashtra | Public Health Department circular, 16-10-2026: private hospitals must display their rates | AI voice, labelled |
+| Hindi, Madhya Pradesh | Labour Commissioner notification, 30-09-2026: minimum wages with VDA, 01.10.2026–31.03.2027 | AI voice, labelled |
+| Odia, Odisha | Labour Commissioner notification 8393, 08-10-2026: minimum wages with VDA | AI voice, labelled |
 
-All three follow the common structure in plan §9 (≈2:35). Text in `[square brackets]` is a placeholder. It must be filled from the real, approved GR shown on screen, never invented.
+Each video follows plan §9:
+1. introduction;
+2. the official document and how its text was obtained;
+3. the summary with page citations;
+4. a question, typed or spoken by a real person;
+5. the answer spoken in a second AI voice;
+6. opening the cited source page;
+7. a question the document cannot answer, which the system declines;
+8. closing.
 
-## What is still needed before recording
+## Rules the pipeline enforces
 
-1. **A real approved GR per state.** Choose the document, then check every fact the video shows against it (plan §10, step 2).
-2. **Working product footage.** The summary, spoken-question, citation and TTS segments must be screen recordings of the real application (plan §10, step 5). Until those features work, either leave the segments out or label them on screen as "proposed feature".
-3. **Native-speaker rewrite and review.** These drafts give structure and tone. A native Marathi, Hindi and Odia writer must adapt them into natural regional speech, and a second native speaker must review the final cut.
-4. **Human narrators.** One native voice artist per language, recorded in a quiet room with consistent levels. Deliver a WAV master plus SRT captions that match the final narration.
-5. **Two clearly labelled audio clips in segment 5.** One is the product's TTS, labelled as computer-generated. The other is an approved human recording, labelled as such (non-negotiable rule 6).
+- Only real product footage and real model output. It refuses stub models; `--allow-test-model` produces files stamped "NOT FOR DISTRIBUTION".
+- If an answer's status contradicts the narration, recording stops.
+- The narration voice and the product voice are different speakers, both labelled as AI on screen. The closing line also says so aloud.
+- `evidence.json` records the document checksum, model, answers shown and voices used.
 
-Do not substitute TTS or an AI voice for the narrator and describe it as human. The plan requires a real narrator for the voice-over.
+## Before client delivery
+
+- [ ] A native speaker reviews each language's narration in `scenes.yaml` and the UI strings.
+- [ ] The MP wage-table transcription is signed in `data/review/` (otherwise MP wage figures stay withheld).
+- [ ] Every number and date on screen is checked against the official PDF.
+- [ ] Each finished video is watched end to end with a native speaker, and sign-off is recorded.
+
+See [docs/operations/gpu-server.md](../operations/gpu-server.md) to run it.

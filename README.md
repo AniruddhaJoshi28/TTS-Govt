@@ -1,38 +1,46 @@
-# TTS-Govt — Government GR Assistant
+# TTS-Govt: Government GR Assistant
 
-Government GR summariser and regional-language voice assistant for Maharashtra, Madhya Pradesh and Odisha. Users find an official resolution, read a plain-language summary grounded in the source, ask questions by voice in Marathi, Hindi or Odia, and open the cited passage to verify the answer.
+A government GR summariser and regional-language voice assistant for Maharashtra, Madhya Pradesh and Odisha. Users can:
 
-The full programme (scope, architecture, workstreams, 24-week roadmap, acceptance gates) is in [docs/implementation-plan.md](docs/implementation-plan.md).
+- find an official order;
+- read a plain-language summary grounded in the source;
+- ask questions in Marathi, Hindi or Odia, typed or spoken;
+- open the cited page of the original to verify every statement.
 
-## Current status — foundation (weeks 1–2)
+The full programme is in [docs/implementation-plan.md](docs/implementation-plan.md). To run it on a GPU server and record the demo videos, see [docs/operations/gpu-server.md](docs/operations/gpu-server.md).
+
+## Status
 
 | Area | State |
 | --- | --- |
-| Repository layout (plan §6) | In place |
-| Shared response envelope (plan §5) | [schemas/api/envelope.py](schemas/api/envelope.py) |
-| API gateway | `/api/v1/health` works; every other planned endpoint returns `501 not_implemented` |
-| Source registry | [services/source_registry/sources.yaml](services/source_registry/sources.yaml): all entries unverified, none crawlable |
-| Crawler (weeks 3–5) | [services/crawler/](services/crawler/): bounded retries, per-host rate limit, same-host enforcement, truncation detection. Site adapters pending source verification |
-| Versioned store | [services/document_ingestion/store.py](services/document_ingestion/store.py): content-addressed originals, dedup, revision history, retry queue, crawl runs (SQLite until weeks 6–8) |
-| PDF extraction | [services/pdf_ocr/extract.py](services/pdf_ocr/extract.py): page-level text, scanned pages flagged `needs_ocr`; OCR engine not yet integrated |
-| Metadata | [services/metadata_extraction/normalise.py](services/metadata_extraction/normalise.py): Devanagari/Odia digits, day-first dates, rupee amounts with source spans |
-| Grounded Q&A (weeks 9–11, partial) | BM25 retrieval, pluggable SLM, citation and date/amount validation, bounded retries. No SLM connected yet |
-| Edge-case matrix (plan §4) | [data/test_manifests/edge_cases.yaml](data/test_manifests/edge_cases.yaml): EC-01–03, 07–09, 16 implemented; 16 pending |
-| Demo videos | [docs/demo_scripts/](docs/demo_scripts/): draft Marathi, Hindi, Odia scripts; no video produced yet |
+| Real documents | One recent official document per state ([data/demo/documents.yaml](data/demo/documents.yaml)), fetched from the official portals |
+| Ingestion | Versioned, content-addressed store; dedup; revision history; retry queue ([services/document_ingestion/](services/document_ingestion/)) |
+| Text extraction | Detects legacy-font corruption in embedded text (found in all sampled MH GRs) and scanned pages, and routes both to Tesseract OCR (`mar`/`hin`/`ori`+`eng`) with word confidences |
+| Number safety | OCR-suspect numbers (confusable digits, impossible dates, low confidence) are masked from evidence. Human review files can sign corrected values ([data/review/](data/review/)) |
+| Retrieval | BM25 with Indic-aware tokens and character trigrams; vector index pending (weeks 6–8) |
+| Summaries and Q&A | Structured sections; every claim cited; every number must appear in verified source text; bounded retries |
+| Model | Any OpenAI-compatible server. Default `Qwen/Qwen3-8B` on vLLM; comparison script in [evaluation/summarisation/](evaluation/summarisation/) |
+| Speech | Indic Parler-TTS, IndicF5 voice cloning (consent-gated) and IndicConformer STT adapters. Audio integrity checks; all synthetic audio labelled |
+| Web UI | [apps/web/](apps/web/): Marathi, Hindi, Odia, English; citations open the source page image; voice input always confirmed |
+| Demo videos | Automated recording pipeline ([scripts/demo/](scripts/demo/)), with scripts in [docs/demo_scripts/scenes.yaml](docs/demo_scripts/scenes.yaml). Runs on the GPU server |
+| Edge cases (plan §4) | 12 of 23 have automated tests ([data/test_manifests/edge_cases.yaml](data/test_manifests/edge_cases.yaml)) |
 
-## Development
+## Local development (no GPU)
 
 ```sh
 pip install -e ".[dev]"
-python -m pytest            # unit tests + edge-case matrix (pending cases show as skipped)
-uvicorn apps.api.main:app --reload
+python -m pytest
+python scripts/build_corpus.py --download   # needs Tesseract with mar/hin/ori
+uvicorn apps.api.main:app --reload           # http://localhost:8000
 ```
+
+Without a model server, summaries and Q&A return an explicit "not configured" error. Nothing is simulated.
 
 ## Ground rules
 
-These come from the plan's non-negotiable failure rules:
+These come from the plan's non-negotiable rules:
 
-- Never fabricate an official document, source link, GR number or citation. Unknown means `null` or an explicit uncertainty, not a guess.
-- Never present synthetic (TTS) speech as a human recording.
-- Never commit government data dumps, credentials, private recordings or model artefacts. `.gitignore` blocks the common formats.
+- Never fabricate an official document, source link, GR number, citation, date or amount. Unknown means `null` or an explicit uncertainty.
+- Never present synthetic speech as a human recording. Every generated voice is labelled.
+- Never commit government data dumps, credentials, voice recordings or model artefacts.
 - A source may only be crawled once it is `verified` and `terms_reviewed` in the registry.

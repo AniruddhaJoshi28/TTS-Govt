@@ -1,0 +1,82 @@
+# Demo document set: one recent, citizen-facing official document per state.
+#
+# Selected on 2026-10-17 from each state's official portal. The PDFs are not
+# committed; scripts/fetch_demo_documents.py downloads them into data/raw/.
+# `portal_metadata` is copied verbatim from the official listing page and is
+# used as a separate, citable source (it is typed text, not OCR).
+#
+# Selection notes:
+# - Documents naming private individuals (e.g. ex-gratia beneficiary orders)
+#   were skipped so no personal data appears in demo recordings (plan rule 7).
+# - Reuse terms: MH robots.txt allows /; the MH disclaimer page returned no
+#   content when fetched. Formal reuse review for all three sources is pending.
+
+documents:
+  - id: mh-2026-10-16-hospital-rates
+    state: MH
+    language: mr
+    document_type: circular
+    issued: 2026-10-16
+    department: सार्वजनिक आरोग्य विभाग
+    department_en: Public Health Department, Government of Maharashtra
+    title: >-
+      आरोग्य सेवांमध्ये पारदर्शकता आणण्यासाठी राज्यातील सर्व खाजगी क्लिनिकल एस्टॅब्लिशमेंट्स
+      (रुग्णालये/क्लिनिक्स) द्वारे सेवा आणि सुविधांचे दर ठळकपणे प्रदर्शित करण्याबाबत.
+    title_en: Prominent display of service and facility rates by all private clinical establishments
+    url: https://gr.maharashtra.gov.in/Site/Upload/Government%20Resolutions/Marathi/202610161056253317.pdf
+    listing_url: https://gr.maharashtra.gov.in/1145/Government-Resolutions
+    fetch: {method: direct}
+    portal_metadata:
+      विभाग: सार्वजनिक आरोग्य विभाग
+      शीर्षक: >-
+        आरोग्य सेवांमध्ये पारदर्शकता आणण्यासाठभ् राज्यातील सर्व खाजगी क्लिनिकल एस्टॅब्लिशमेंटस
+        रुग्णालये/क्लिनिक्स द्वारे सेवा आणि सुविधांचे दर ठळकपणे प्रदर्शित करण्याबाबत
+      संकेतांक: "202610161056253317"
+      दिनांक: 16-10-2026
+
+  - id: mp-2026-09-30-minimum-wages-vda
+    state: MP
+    language: hi
+    document_type: notification
+    issued: 2026-09-30
+    department: श्रमायुक्त कार्यालय, मध्यप्रदेश, इंदौर
+    department_en: Office of the Labour Commissioner, Madhya Pradesh, Indore
+    title: >-
+      न्यूनतम वेतन अधिनियम, 1948 के अंतर्गत राज्य के श्रमिकों के लिए दि. 01.10.26 से 31.03.2027 तक
+      परिवर्तनशील मंहगाई भत्ते सहित पुनरीक्षित न्यूनतम वेतन की दरें।
+    title_en: >-
+      Revised Minimum Wages Rates including Variable Dearness Allowance for State Workers under
+      Minimum Wages Act, 1948 from 01.10.2026 to 31.03.2027
+    url: https://labour.mponline.gov.in/Portal/Services/Shram/DMS/Citizen/Display_Documents.aspx
+    listing_url: https://labour.mponline.gov.in/Portal/Services/Shram/DMS/Citizen/Display_Documents.aspx
+    fetch: {method: mp_labour_dms, path: /QL_Shram/DMS/Document/9e70d612-1d0c-4efb-9e45-f72f443c7f38.pdf}
+    portal_metadata:
+      कार्यालय: Labour Commissioner HO, Indore
+      श्रेणी: Minimum Wages
+      दस्तावेज़ क्रमांक: 22288-337
+      दिनांक: 30/09/2026
+      विषय: >-
+        न्यूनतम वेतन अधिनियम, 1948 के अंतर्गत राज्य के श्रमिकों के लिए दि. 01.10.26 से 31.03.2027 तक
+        परिवर्तनशील मंहगाई भत्ते सहित पुनरीक्षित न्यूनतम वेतन की दरें।
+      Subject: >-
+        Revised Minimum Wages Rates including Variable Dearness Allowance for State Workers under
+        Minimum Wages Act, 1948 from 01.10.2026 to 31.03.2027
+
+  - id: od-2026-10-08-minimum-wages-vda
+    state: OD
+    language: or
+    document_type: notification
+    issued: 2026-10-08
+    department: ଶ୍ରମ ଆୟୁକ୍ତ, ଓଡ଼ିଶାଙ୍କ କାର୍ଯ୍ୟାଳୟ
+    department_en: Office of the Labour Commissioner, Odisha (Labour & ESI Department)
+    title: ପରିବର୍ତ୍ତନୀୟ ମହଙ୍ଗା ଭତ୍ତା (VDA) ସହିତ ସର୍ବନିମ୍ନ ମଜୁରି ସମ୍ବନ୍ଧୀୟ ବିଜ୍ଞପ୍ତି
+    title_en: Notification on Minimum Wages with VDA (notification no. 8393/LC)
+    url: https://labourdirectorate.odisha.gov.in/sites/default/files/2026-10/8393.pdf
+    listing_url: https://labourdirectorate.odisha.gov.in/notifications-guidelines
+    fetch: {method: direct}
+    portal_metadata:
+      Title: Notification on Minimum Wages with VDA w.e.f. 08.10.2026
+      Department: Labour & ESI Dept.
+      Date: 08-10-2026
+      # The listing title says "w.e.f. 08.10.2026" while the notification text
+      # says the revised rates apply from 1 October 2026. Surface, don't resolve.

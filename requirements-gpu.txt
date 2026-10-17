@@ -1,0 +1,11 @@
+# App environment on the GPU server (Linux, CUDA). vLLM goes in a SEPARATE
+# environment because parler-tts pins its own transformers version.
+# After the first working install, pin exact versions: pip freeze > requirements-gpu.lock
+-e .[dev]
+torch
+torchaudio
+parler-tts @ git+https://github.com/huggingface/parler-tts.git
+soundfile
+pypdfium2
+imageio-ffmpeg
+playwright

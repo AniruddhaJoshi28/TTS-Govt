@@ -65,8 +65,8 @@ def make_pdf(text: str | None) -> bytes:
     return bytes(out)
 
 
-def passage(pid: str, text: str, page: int = 1):
+def passage(pid: str, text: str, page: int = 1, **kw):
     from services.retrieval.bm25 import Passage
 
     return Passage(passage_id=pid, document_id=f"doc-{pid}", version_id="v1",
-                   url=f"https://gr.example.gov.in/{pid}.pdf", page=page, text=text)
+                   url=f"https://gr.example.gov.in/{pid}.pdf", page=page, text=text, **kw)

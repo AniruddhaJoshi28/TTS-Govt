@@ -40,3 +40,12 @@ models/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Built artefacts (rebuilt by scripts/build_corpus.py)
+data/store/
+data/corpus/
+data/cache/
+output/
+
+# Voice references and consent records are personal data
+data/voices/*/

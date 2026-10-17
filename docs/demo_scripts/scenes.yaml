@@ -1,0 +1,165 @@
+# Demo video scenes, one video per state (plan §9 structure).
+# Canonical source for scripts/demo/make_demo_video.py.
+#
+# - Narration is spoken by an AI voice (Indic Parler-TTS). Every video carries a
+#   permanent on-screen label saying so, and the closing line says it aloud.
+# - The product's own answer audio uses a different speaker so the two voices are
+#   distinguishable (plan §8).
+# - Numbers in narration are written as words so the TTS reads them correctly.
+# - Narration only describes what the screen shows. Facts about each document
+#   were checked against the official PDF; the model's actual answers are what
+#   appear on screen, and the pipeline aborts if an answer's status does not
+#   match the narration (`expect`).
+# - All regional text is a DRAFT pending native-speaker review.
+
+videos:
+  MH:
+    language: mr
+    narrator: Sunita
+    product_voice: Sanjay
+    label: "वर्णन: AI-निर्मित आवाज · उत्पादनातील आवाजही AI-निर्मित"
+    scenes:
+      - id: intro
+        action: home
+        narration: >-
+          नमस्कार. शासन निर्णय आणि परिपत्रकांमध्ये आपल्या कामाची महत्त्वाची माहिती असते, पण हे दस्तऐवज
+          वाचायला आणि समजायला वेळ लागतो. हे साधन तीच माहिती सोप्या मराठीत समजावून सांगते.
+      - id: document
+        action: document
+        narration: >-
+          हे सार्वजनिक आरोग्य विभागाचे सोळा ऑक्टोबर दोन हजार सव्वीसचे परिपत्रक आहे. ते शासनाच्या अधिकृत
+          संकेतस्थळावरून घेतले आहे. या दस्तऐवजाचा मूळ मजकूर बिघडलेला होता, म्हणून प्रणालीने तो OCR ने
+          पुन्हा वाचला, आणि हे इथे स्पष्टपणे दाखवले आहे.
+      - id: summary
+        action: summary
+        narration: >-
+          आता सारांश तयार करूया. परिपत्रक काय सांगते, ते कोणाला लागू आहे आणि कोणत्या अटी आहेत, हे सोप्या
+          भाषेत दिसते. प्रत्येक वाक्यापुढे मूळ दस्तऐवजाचा पृष्ठ क्रमांक आहे.
+      - id: question
+        action: ask
+        question: रुग्णालयांनी दरपत्रक कोणत्या भाषेत लावायचे?
+        expect: answered
+        narration: >-
+          आता एक प्रश्न विचारूया: रुग्णालयांनी दरपत्रक कोणत्या भाषेत लावायचे? उत्तर मूळ परिपत्रकाच्या
+          आधारावरच दिले जाते.
+      - id: voice
+        action: listen_answer
+        narration: हे उत्तर ऐकताही येते. आता ऐकू येणारा आवाजही संगणकाने तयार केलेला आहे.
+      - id: trust
+        action: open_citation
+        narration: >-
+          पृष्ठ क्रमांकावर क्लिक केल्यावर मूळ परिपत्रकातील तोच मजकूर आणि मूळ पान उघडते, त्यामुळे प्रत्येक
+          माहिती तपासून पाहता येते.
+      - id: unknown
+        action: ask
+        question: हे नियम न पाळणाऱ्या रुग्णालयाला किती रुपये दंड आहे?
+        expect: insufficient_evidence
+        narration: >-
+          जी माहिती परिपत्रकात नाही, तिचा अंदाज लावला जात नाही. अशा वेळी प्रणाली स्पष्टपणे सांगते की
+          उपलब्ध दस्तऐवजांतून उत्तर निश्चित करता येत नाही.
+      - id: closing
+        action: home_scroll_top
+        narration: >-
+          शासकीय माहिती सोपी करणे, आणि तीही मूळ अर्थ न बदलता, हा या प्रकल्पाचा उद्देश आहे. सध्या ही सेवा
+          प्रायोगिक टप्प्यात आहे. या व्हिडिओतील वर्णन AI-निर्मित आवाजात आहे. धन्यवाद.
+
+  MP:
+    language: hi
+    narrator: Divya
+    product_voice: Rohit
+    label: "वर्णन: AI-निर्मित आवाज़ · उत्पाद की आवाज़ भी AI-निर्मित"
+    scenes:
+      - id: intro
+        action: home
+        narration: >-
+          नमस्कार। सरकारी आदेशों और अधिसूचनाओं में हमारे काम की ज़रूरी जानकारी होती है, लेकिन इन्हें पढ़ना
+          और समझना आसान नहीं होता। यह सहायक वही जानकारी आसान हिंदी में समझाता है।
+      - id: document
+        action: document
+        narration: >-
+          यह श्रमायुक्त कार्यालय, मध्यप्रदेश की तीस सितंबर दो हज़ार छब्बीस की अधिसूचना है, जिसमें श्रमिकों
+          के लिए न्यूनतम वेतन की नई दरें दी गई हैं। यह स्कैन किया हुआ दस्तावेज़ है, इसलिए प्रणाली ने इसे OCR
+          से पढ़ा है। जिन अंकों को OCR ठीक से नहीं पढ़ पाया, उन्हें अलग से चिह्नित किया गया है।
+      - id: summary
+        action: summary
+        narration: >-
+          अब सार तैयार करते हैं। दस्तावेज़ क्या कहता है और किन पर लागू है, यह आसान भाषा में दिखता है। हर
+          वाक्य के साथ मूल दस्तावेज़ का पृष्ठ दिया गया है। जिन अंकों की पुष्टि नहीं हुई है, वे सार में शामिल
+          नहीं किए जाते।
+      - id: question
+        action: ask
+        question: ये नई दरें कब से कब तक लागू रहेंगी?
+        expect: answered
+        narration: >-
+          अब एक सवाल पूछते हैं: ये नई दरें कब से कब तक लागू रहेंगी? जवाब मूल दस्तावेज़ के आधार पर ही दिया
+          जाता है।
+      - id: voice
+        action: listen_answer
+        narration: जवाब सुना भी जा सकता है। अभी जो आवाज़ आप सुनेंगे, वह भी कंप्यूटर द्वारा बनाई गई है।
+      - id: trust
+        action: open_citation
+        narration: >-
+          पृष्ठ संख्या पर क्लिक करते ही मूल दस्तावेज़ का वही हिस्सा और मूल पृष्ठ खुल जाता है, ताकि हर जानकारी
+          जाँची जा सके।
+      - id: unknown
+        action: ask
+        question: न्यूनतम वेतन न देने पर नियोक्ता पर कितना जुर्माना लगेगा?
+        expect: insufficient_evidence
+        narration: >-
+          जो जानकारी दस्तावेज़ में नहीं है, उसका अंदाज़ा नहीं लगाया जाता। ऐसे में प्रणाली साफ़ बताती है कि
+          उपलब्ध दस्तावेज़ों से उत्तर तय नहीं किया जा सकता।
+      - id: closing
+        action: home_scroll_top
+        narration: >-
+          सरकारी जानकारी को आसान बनाना, और वह भी उसका मूल अर्थ बदले बिना, यही इस पहल का उद्देश्य है। फ़िलहाल
+          यह सेवा पायलट चरण में है। इस वीडियो का वर्णन AI-निर्मित आवाज़ में है। धन्यवाद।
+
+  OD:
+    language: or
+    narrator: Debjani
+    product_voice: Manas
+    label: "ବର୍ଣ୍ଣନା: AI-ସୃଷ୍ଟ ସ୍ୱର · ଉତ୍ପାଦର ସ୍ୱର ମଧ୍ୟ AI-ସୃଷ୍ଟ"
+    scenes:
+      - id: intro
+        action: home
+        narration: >-
+          ନମସ୍କାର। ସରକାରୀ ଆଦେଶ ଓ ବିଜ୍ଞପ୍ତିରେ ଆମ ପାଇଁ ଦରକାରୀ ତଥ୍ୟ ଥାଏ, କିନ୍ତୁ ସେଗୁଡ଼ିକୁ ପଢ଼ି ବୁଝିବା ସହଜ
+          ନୁହେଁ। ଏହି ସହାୟକ ସେହି ତଥ୍ୟକୁ ସରଳ ଓଡ଼ିଆରେ ବୁଝାଇଦିଏ।
+      - id: document
+        action: document
+        narration: >-
+          ଏହା ଶ୍ରମ ଆୟୁକ୍ତ, ଓଡ଼ିଶାଙ୍କ କାର୍ଯ୍ୟାଳୟର ଅକ୍ଟୋବର ଆଠ, ଦୁଇ ହଜାର ଛବିଶ ତାରିଖର ବିଜ୍ଞପ୍ତି, ଯେଉଁଥିରେ
+          ପରିବର୍ତ୍ତନୀୟ ମହଙ୍ଗା ଭତ୍ତା ସହିତ ସର୍ବନିମ୍ନ ମଜୁରିର ନୂଆ ହାର ଦିଆଯାଇଛି। ଏହା ସ୍କାନ କରାଯାଇଥିବା ଦଲିଲ,
+          ତେଣୁ ପ୍ରଣାଳୀ ଏହାକୁ OCR ଦ୍ୱାରା ପଢ଼ିଛି।
+      - id: summary
+        action: summary
+        narration: >-
+          ବର୍ତ୍ତମାନ ସାରାଂଶ ପ୍ରସ୍ତୁତ କରିବା। ଦଲିଲ କ'ଣ କହୁଛି ଓ କାହା ପାଇଁ ପ୍ରଯୁଜ୍ୟ, ତାହା ସରଳ ଭାଷାରେ ଦେଖାଯାଏ।
+          ପ୍ରତ୍ୟେକ ବାକ୍ୟ ସହିତ ମୂଳ ଦଲିଲର ପୃଷ୍ଠା ସଂଖ୍ୟା ଦିଆଯାଇଛି।
+      - id: question
+        action: ask
+        question: ଅଣକୁଶଳୀ ଶ୍ରମିକଙ୍କ ଦୈନିକ ସର୍ବନିମ୍ନ ମଜୁରି କେତେ?
+        expect: answered
+        narration: >-
+          ବର୍ତ୍ତମାନ ଗୋଟିଏ ପ୍ରଶ୍ନ ପଚାରିବା: ଅଣକୁଶଳୀ ଶ୍ରମିକଙ୍କ ଦୈନିକ ସର୍ବନିମ୍ନ ମଜୁରି କେତେ? ଉତ୍ତର ମୂଳ ବିଜ୍ଞପ୍ତି
+          ଆଧାରରେ ହିଁ ଦିଆଯାଏ।
+      - id: voice
+        action: listen_answer
+        narration: ଉତ୍ତରଟି ଶୁଣି ମଧ୍ୟ ହେବ। ବର୍ତ୍ତମାନ ଯେଉଁ ସ୍ୱର ଶୁଣିବେ, ତାହା ମଧ୍ୟ କମ୍ପ୍ୟୁଟର ଦ୍ୱାରା ତିଆରି।
+      - id: trust
+        action: open_citation
+        narration: >-
+          ପୃଷ୍ଠା ସଂଖ୍ୟା ଉପରେ କ୍ଲିକ କଲେ ମୂଳ ବିଜ୍ଞପ୍ତିର ସେହି ଅଂଶ ଓ ମୂଳ ପୃଷ୍ଠା ଖୋଲିଯାଏ, ଯାହାଦ୍ୱାରା ପ୍ରତ୍ୟେକ
+          ତଥ୍ୟ ଯାଞ୍ଚ କରିହେବ।
+      - id: unknown
+        action: ask
+        question: ମଜୁରି ନ ଦେଲେ ନିଯୁକ୍ତିଦାତାଙ୍କୁ କେତେ ଜରିମାନା ହେବ?
+        expect: insufficient_evidence
+        narration: >-
+          ଯେଉଁ ତଥ୍ୟ ଦଲିଲରେ ନାହିଁ, ତାହା ଅନୁମାନ କରାଯାଏ ନାହିଁ। ଏପରି ସ୍ଥଳେ ପ୍ରଣାଳୀ ସ୍ପଷ୍ଟ କହେ ଯେ ଉପଲବ୍ଧ
+          ଦଲିଲରୁ ଉତ୍ତର ନିଶ୍ଚିତ କରାଯାଇପାରିବ ନାହିଁ।
+      - id: closing
+        action: home_scroll_top
+        narration: >-
+          ସରକାରୀ ତଥ୍ୟକୁ ସହଜ କରିବା, ତାହାର ମୂଳ ଅର୍ଥ ବଦଳାଇ ନ ଦେଇ, ଏହା ହିଁ ଏହି ପ୍ରୟାସର ଲକ୍ଷ୍ୟ। ବର୍ତ୍ତମାନ ଏହି
+          ସେବା ପାଇଲଟ ପର୍ଯ୍ୟାୟରେ ଅଛି। ଏହି ଭିଡିଓର ବର୍ଣ୍ଣନା AI-ସୃଷ୍ଟ ସ୍ୱରରେ। ଧନ୍ୟବାଦ।

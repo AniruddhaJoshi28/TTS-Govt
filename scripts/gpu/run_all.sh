@@ -42,7 +42,7 @@ step "Starting the model server: $LLM_MODEL (GPU $LLM_GPUS)"
 if curl -fsS -o /dev/null "$LLM_BASE_URL/models" 2>/dev/null; then
   echo "already running"
 else
-  CUDA_VISIBLE_DEVICES="$LLM_GPUS" nohup "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
+  nohup "${VLLM_ENV[@]}" CUDA_VISIBLE_DEVICES="$LLM_GPUS" "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
     --dtype bfloat16 --max-model-len "$MAX_MODEL_LEN" --gpu-memory-utilization "$GPU_MEM" \
     --served-model-name "$LLM_MODEL" >"$LOGS/vllm.log" 2>&1 &
   echo $! >"$LOGS/vllm.pid"

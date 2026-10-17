@@ -23,6 +23,28 @@ fi
 # Language data (mar, hin, ori, eng from tessdata_best) always comes from .tools/tessdata.
 export TESSDATA_PREFIX="${TESSDATA_PREFIX:-$TOOLS/tessdata}"
 
+# vLLM's FlashInfer sampler JIT-compiles a kernel with nvcc at startup. Shared servers often
+# have an older system CUDA (/usr/local/cuda) whose nvcc rejects FlashInfer's flags
+# ("Unknown option '--compress-mode=size'"). Use vLLM's PyTorch sampler instead (no compiling),
+# and if anything else must compile, prefer the newer nvcc installed inside the vLLM env.
+export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
+VLLM_CUDA_HOME=""
+for nvcc in "$VENV_VLLM"/lib/python3*/site-packages/nvidia/*/bin/nvcc "$VENV_VLLM"/lib/python3*/site-packages/nvidia/cuda_nvcc/bin/nvcc; do
+  root="$(dirname "$(dirname "$nvcc")")"
+  if [[ -x "$nvcc" && -f "$root/include/cuda_runtime.h" ]]; then
+    VLLM_CUDA_HOME="$root"
+    break
+  fi
+done
+export VLLM_CUDA_HOME
+
+# Command prefix for the vLLM process only (the app environment never compiles CUDA code).
+# An array, not a function, so `nohup "${VLLM_ENV[@]}" vllm ... &` records vLLM's own PID.
+VLLM_ENV=(env)
+if [[ -n "$VLLM_CUDA_HOME" ]]; then
+  VLLM_ENV+=(CUDA_HOME="$VLLM_CUDA_HOME" PATH="$VLLM_CUDA_HOME/bin:$PATH")
+fi
+
 export LLM_PORT="${LLM_PORT:-8001}"
 export PORT="${PORT:-8000}"
 export LLM_BASE_URL="${LLM_BASE_URL:-http://127.0.0.1:$LLM_PORT/v1}"
@@ -71,4 +93,5 @@ show_gpu_plan() {
   echo "GPU memory right now (index, total MB, free MB):"
   sed 's/^/  /' <<<"$GPU_TABLE"
   echo "Plan: $LLM_MODEL on GPU $LLM_GPUS (GPU_MEM=$GPU_MEM, context $MAX_MODEL_LEN), speech on GPU $APP_GPUS"
+  echo "vLLM: FlashInfer sampler $([[ $VLLM_USE_FLASHINFER_SAMPLER == 0 ]] && echo off || echo on);"        "CUDA compiler: ${VLLM_CUDA_HOME:-system (/usr/local/cuda)}"
 }

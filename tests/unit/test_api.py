@@ -134,7 +134,7 @@ def test_tts_job_produces_labelled_synthetic_audio(monkeypatch):
     monkeypatch.setattr(main.rt, "tts", FakeTTS())
     job = client.post("/api/v1/speech/synthesis", json={"text": "अकुशल श्रमिक की दैनिक दर", "language": "hi"}).json()
     job_id = job["data"]["job_id"]
-    for _ in range(50):
+    for _ in range(200):  # up to 10 s; the job runs on a background thread
         status = client.get(f"/api/v1/speech/synthesis/{job_id}").json()["data"]
         if status["status"] in ("done", "failed"):
             break

@@ -15,16 +15,25 @@ from pathlib import Path
 import numpy as np
 import yaml
 
+from services.tts.postprocess import pause, plausible, polish
+
 VOICES_DIR = Path(__file__).parents[2] / "data" / "voices"
 
 # Named speakers recommended for each language on the Indic Parler-TTS model card.
 PARLER_SPEAKERS = {"mr": ("Sanjay", "Sunita"), "hi": ("Rohit", "Divya"), "or": ("Manas", "Debjani"), "en": ("Thoma", "Mary")}
 
+# Indic Parler-TTS is steered by a plain-language description. Words like "expressive",
+# "moderate pace" and "very clear, close-up recording" move it away from a flat, read-out
+# delivery towards a person explaining something.
 PARLER_STYLE = (
-    "{speaker} speaks at a moderate, unhurried pace in a calm, warm and friendly tone, "
-    "like a helpful local officer explaining something clearly. The recording is very high quality, "
-    "with the voice sounding clear and close up, and no background noise."
+    "{speaker} speaks in a warm, friendly and expressive voice at a moderate, relaxed pace, "
+    "like a person calmly explaining something to a neighbour, with natural intonation. "
+    "The recording is of very high quality, with the voice sounding very clear and close up, "
+    "and there is no background noise."
 )
+
+SENTENCE_PAUSE_S = 0.42
+MAX_TAKES = 3  # regenerate a sentence that comes out cut off or rambling
 
 
 class ConsentMissing(PermissionError):
@@ -54,19 +63,33 @@ class IndicParlerTTS:
         self.description_tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_encoder._name_or_path)
         self.sample_rate = self.model.config.sampling_rate
 
-    def synthesize(self, chunks: list[str], lang: str, speaker: str | None = None, pause_s: float = 0.35) -> Audio:
+    def _take(self, desc, text: str) -> np.ndarray:
+        prompt = self.tokenizer(text, return_tensors="pt").to(self.device)
+        with self.torch.no_grad():
+            out = self.model.generate(
+                input_ids=desc.input_ids, attention_mask=desc.attention_mask,
+                prompt_input_ids=prompt.input_ids, prompt_attention_mask=prompt.attention_mask,
+                do_sample=True, temperature=1.0,
+            )
+        return polish(out.cpu().numpy().squeeze().astype(np.float32), self.sample_rate)
+
+    def synthesize(self, chunks: list[str], lang: str, speaker: str | None = None,
+                   pause_s: float = SENTENCE_PAUSE_S) -> Audio:
         speaker = speaker or PARLER_SPEAKERS[lang][0]
         desc = self.description_tokenizer(PARLER_STYLE.format(speaker=speaker), return_tensors="pt").to(self.device)
         pieces = []
         for text in chunks:
-            prompt = self.tokenizer(text, return_tensors="pt").to(self.device)
-            with self.torch.no_grad():
-                out = self.model.generate(
-                    input_ids=desc.input_ids, attention_mask=desc.attention_mask,
-                    prompt_input_ids=prompt.input_ids, prompt_attention_mask=prompt.attention_mask,
-                )
-            pieces.append(out.cpu().numpy().squeeze().astype(np.float32))
-            pieces.append(np.zeros(int(pause_s * self.sample_rate), dtype=np.float32))
+            best = None
+            for _ in range(MAX_TAKES):
+                take = self._take(desc, text)
+                if plausible(take.size / self.sample_rate, text):
+                    best = take
+                    break
+                # keep the take whose length is closest to a natural speaking rate
+                target = len(text.replace(" ", "")) / 12.0
+                if best is None or abs(take.size / self.sample_rate - target) < abs(best.size / self.sample_rate - target):
+                    best = take
+            pieces += [best, pause(pause_s, self.sample_rate)]
         return Audio(np.concatenate(pieces[:-1]), self.sample_rate, self.model_id, speaker)
 
 
@@ -93,12 +116,12 @@ class IndicF5Clone:
 
         self.model = AutoModel.from_pretrained(self.model_id, trust_remote_code=True)
 
-    def synthesize(self, chunks: list[str], lang: str, speaker: str | None = None, pause_s: float = 0.35) -> Audio:
+    def synthesize(self, chunks: list[str], lang: str, speaker: str | None = None,
+                   pause_s: float = SENTENCE_PAUSE_S) -> Audio:
         pieces = []
         for text in chunks:
             audio = np.asarray(self.model(text, ref_audio_path=self.ref_audio, ref_text=self.consent["reference_text"]))
             if audio.dtype == np.int16:
                 audio = audio.astype(np.float32) / 32768.0
-            pieces.append(audio.astype(np.float32))
-            pieces.append(np.zeros(int(pause_s * self.sample_rate), dtype=np.float32))
+            pieces += [polish(audio.astype(np.float32), self.sample_rate), pause(pause_s, self.sample_rate)]
         return Audio(np.concatenate(pieces[:-1]), self.sample_rate, self.model_id, f"clone:{self.voice_id}")

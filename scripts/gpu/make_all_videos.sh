@@ -13,7 +13,9 @@ for STATE in MH MP OD; do
     failed+=("$STATE")
   fi
 done
-ls -lh output/demo/*/demo_*.mp4 2>/dev/null || true
+echo
+echo "Finished videos:"
+ls -lh output/demo/final/*.mp4 2>/dev/null || echo "  (none)"
 if (( ${#failed[@]} > 0 )); then
   echo "Not recorded: ${failed[*]} (see the ABORTED reason above)." >&2
   exit 1

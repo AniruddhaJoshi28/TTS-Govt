@@ -9,7 +9,7 @@ bash scripts/gpu/setup.sh      # once: Python, OCR, both environments, model wei
 bash scripts/gpu/run_all.sh    # start model + app, build corpus, record the 3 videos
 ```
 
-The videos land in `output/demo/MH/`, `output/demo/MP/` and `output/demo/OD/`. Run `bash scripts/gpu/stop_all.sh` to stop the services.
+The three finished videos land in `output/demo/final/` (`demo_MH_marathi.mp4`, `demo_MP_hindi.mp4`, `demo_OD_odia.mp4`), with captions next to each. Run `bash scripts/gpu/stop_all.sh` to stop the services.
 
 Before you record videos for the client, do the [human checks](#before-recording-for-the-client).
 
@@ -72,7 +72,7 @@ For each state it:
 
 | Output | Contents |
 | --- | --- |
-| `demo_<STATE>.mp4` | Video, audio, regional subtitles |
+| `demo_<STATE>_<language>.mp4` | 1080p video with narration and the product's voice, captions burned in and as a subtitle track (also copied to `output/demo/final/`) |
 | `captions.srt` | Subtitles |
 | `narration.wav` | Soundtrack |
 | `evidence.json` | Document checksum, model, every answer shown, voices, reviewer checklist |

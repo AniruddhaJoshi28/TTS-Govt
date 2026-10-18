@@ -62,6 +62,9 @@ class Runtime:
         self.stt = None
         self.stt_error: str | None = None
         self.jobs: dict[str, dict] = {}
+        # Finished speech by (text, language, speaker): the same answer is not synthesized
+        # twice, and a "Listen" click on an already-spoken answer plays immediately.
+        self.speech_cache: dict[str, dict] = {}
         self.pool = ThreadPoolExecutor(max_workers=1)  # one GPU, one synthesis at a time
         self.lock = threading.Lock()
         self.reload()
@@ -430,6 +433,10 @@ class SynthesisJob(BaseModel):
     error: str | None = None
 
 
+def _speech_key(req: SynthesisRequest) -> str:
+    return hashlib.sha256(f"{req.language.value}|{req.speaker or ''}|{' '.join(req.text.split())}".encode()).hexdigest()
+
+
 def _run_synthesis(job_id: str, req: SynthesisRequest) -> None:
     from services.tts.service import AudioQualityError, synthesize
     job = rt.jobs[job_id]
@@ -444,6 +451,9 @@ def _run_synthesis(job_id: str, req: SynthesisRequest) -> None:
         return
     job.update(status="done", model=result.model, voice=result.voice, duration_s=round(result.duration_s, 2),
                wav=result.wav)
+    if len(rt.speech_cache) > 500:
+        rt.speech_cache.clear()
+    rt.speech_cache[_speech_key(req)] = dict(job)
 
 
 @app.post(f"{API_PREFIX}/speech/synthesis", response_model=Envelope[SynthesisJob], status_code=202,
@@ -453,6 +463,11 @@ def create_synthesis(request: Request, body: SynthesisRequest):
         raise ApiError(503, "tts_unavailable", "Speech synthesis is not available. The text answer is still valid.",
                        retryable=bool(rt.tts_error))
     job_id = uuid.uuid4().hex
+    cached = rt.speech_cache.get(_speech_key(body))
+    if cached:
+        rt.jobs[job_id] = dict(cached)
+        data = SynthesisJob(job_id=job_id, **{k: v for k, v in cached.items() if k != "wav"})
+        return Envelope[SynthesisJob](request_id=request.state.request_id, language=body.language, data=data)
     rt.jobs[job_id] = {"status": "queued"}
     rt.pool.submit(_run_synthesis, job_id, body)
     return Envelope[SynthesisJob](request_id=request.state.request_id, language=body.language,

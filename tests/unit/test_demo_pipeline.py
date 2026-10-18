@@ -41,9 +41,33 @@ def test_scene_file_is_complete():
     assert set(videos) == {"MH", "MP", "OD"}
     for state, v in videos.items():
         actions = [s["action"] for s in v["scenes"]]
-        assert actions[0] == "home" and "listen_answer" in actions and "open_citation" in actions
+        assert actions[0] == "title_card" and actions[-1] == "closing_card"
+        assert {"overview", "document", "summary", "open_citation", "ask", "listen_answer"} <= set(actions)
+        assert {"title", "subtitle", "closing"} <= set(v["card"])
         assert v["narrator"] != v["product_voice"], "narrator and product voice must be distinguishable"
         assert "AI" in v["label"] and "AI" in v["scenes"][-1]["narration"], "synthetic narration must be disclosed"
         for s in v["scenes"]:
             if s["action"] == "ask":
                 assert s["expect"] in ("answered", "insufficient_evidence")
+
+
+def test_concat_list_holds_each_frame_until_the_next():
+    frames = [(100.0, "f0.jpg"), (100.5, "f1.jpg"), (102.0, "f2.jpg")]
+    script = demo.concat_list(frames, 103.0)
+    assert script.startswith("ffconcat version 1.0")
+    assert "file 'f0.jpg'\nduration 0.5000" in script
+    assert "file 'f1.jpg'\nduration 1.5000" in script
+    assert "file 'f2.jpg'\nduration 1.0000" in script
+    assert script.rstrip().endswith("file 'f2.jpg'")
+
+
+def test_polish_trims_silence_and_levels():
+    from services.tts.postprocess import plausible, polish
+
+    sr = 16000
+    voice = (0.05 * np.sin(np.arange(sr) / 5)).astype(np.float32)
+    x = np.concatenate([np.zeros(sr), voice, np.zeros(sr)])
+    y = polish(x, sr)
+    assert 0.9 * sr < y.size < 1.3 * sr  # leading/trailing second of silence removed
+    assert abs(20 * np.log10(np.sqrt(np.mean(y ** 2))) + 20) < 1.5  # levelled to about -20 dBFS
+    assert plausible(3.0, "अकुशल श्रमिकांना दैनिक दर") and not plausible(0.3, "अकुशल श्रमिकांना दैनिक दर लागू")

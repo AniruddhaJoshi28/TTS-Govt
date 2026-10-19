@@ -11,6 +11,7 @@ All output is synthetic speech and is labelled as such by the service layer.
 
 from dataclasses import dataclass
 from pathlib import Path
+import os
 
 import numpy as np
 import yaml
@@ -21,19 +22,26 @@ VOICES_DIR = Path(__file__).parents[2] / "data" / "voices"
 
 # Named speakers recommended for each language on the Indic Parler-TTS model card.
 PARLER_SPEAKERS = {"mr": ("Sanjay", "Sunita"), "hi": ("Rohit", "Divya"), "or": ("Manas", "Debjani"), "en": ("Thoma", "Mary")}
+DEFAULT_SPEAKERS = {
+    "mr": os.environ.get("TTS_VOICE_MR", "Sunita"),
+    "hi": os.environ.get("TTS_VOICE_HI", "Divya"),
+    "or": os.environ.get("TTS_VOICE_OR", "Debjani"),
+    "en": os.environ.get("TTS_VOICE_EN", "Mary"),
+}
 
 # Indic Parler-TTS is steered by a plain-language description. Words like "expressive",
 # "moderate pace" and "very clear, close-up recording" move it away from a flat, read-out
 # delivery towards a person explaining something.
 PARLER_STYLE = (
-    "{speaker} speaks in a warm, friendly and expressive voice at a moderate, relaxed pace, "
-    "like a person calmly explaining something to a neighbour, with natural intonation. "
+    "{speaker} is a fluent native speaker. {speaker} speaks clearly at a moderate pace, "
+    "with accurate pronunciation, natural intonation, and brief pauses at commas and full stops, "
+    "like a person calmly explaining important government information to a citizen. "
     "The recording is of very high quality, with the voice sounding very clear and close up, "
     "and there is no background noise."
 )
 
 SENTENCE_PAUSE_S = 0.42
-MAX_TAKES = 3  # regenerate a sentence that comes out cut off or rambling
+MAX_TAKES = max(1, int(os.environ.get("TTS_MAX_TAKES", "1")))
 
 
 class ConsentMissing(PermissionError):
@@ -62,21 +70,28 @@ class IndicParlerTTS:
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
         self.description_tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_encoder._name_or_path)
         self.sample_rate = self.model.config.sampling_rate
+        self._descriptions = {}
 
     def _take(self, desc, text: str) -> np.ndarray:
         prompt = self.tokenizer(text, return_tensors="pt").to(self.device)
-        with self.torch.no_grad():
+        with self.torch.inference_mode():
             out = self.model.generate(
                 input_ids=desc.input_ids, attention_mask=desc.attention_mask,
                 prompt_input_ids=prompt.input_ids, prompt_attention_mask=prompt.attention_mask,
-                do_sample=True, temperature=1.0,
+                do_sample=True, temperature=0.8,
             )
         return polish(out.cpu().numpy().squeeze().astype(np.float32), self.sample_rate)
 
     def synthesize(self, chunks: list[str], lang: str, speaker: str | None = None,
                    pause_s: float = SENTENCE_PAUSE_S) -> Audio:
-        speaker = speaker or PARLER_SPEAKERS[lang][0]
-        desc = self.description_tokenizer(PARLER_STYLE.format(speaker=speaker), return_tensors="pt").to(self.device)
+        speaker = speaker or DEFAULT_SPEAKERS[lang]
+        if speaker not in PARLER_SPEAKERS[lang]:
+            raise ValueError(f"unsupported {lang!r} speaker {speaker!r}")
+        if speaker not in self._descriptions:
+            self._descriptions[speaker] = self.description_tokenizer(
+                PARLER_STYLE.format(speaker=speaker), return_tensors="pt"
+            ).to(self.device)
+        desc = self._descriptions[speaker]
         pieces = []
         for text in chunks:
             best = None

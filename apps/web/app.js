@@ -415,6 +415,7 @@ function renderSummary(body) {
     + notes.map(n => `<p class="note">${esc(n)}</p>`).join("")
     + listenBlock(stated.flatMap(x => x.claims.map(c => c.text)).join(" "), "summary")
     + `<p class="provenance">${esc(s.generatedBy(d.model, fmtDate(d.generated_at)))}</p>`;
+  prefetchSpeech($("#summary"));
 }
 
 // -- questions -----------------------------------------------------------------
@@ -439,6 +440,7 @@ async function ask(question) {
     box.innerHTML = d.claims.map(c => `<p class="claim">${esc(c.text)}${citeButtons(c.citations)}</p>`).join("")
       + (d.removed_claims ? `<p class="note">${esc(s.removedNote(d.removed_claims))}</p>` : "")
       + listenBlock(text, "answer") + feedbackBlock();
+    prefetchSpeech(box);
   } catch (err) {
     box.innerHTML = `<p class="error">${esc(errorText(err))}</p>`;
   } finally {
@@ -497,27 +499,42 @@ function listenBlock(text, id) {
     <textarea hidden>${esc(text)}</textarea></div>`;
 }
 
+async function prepareSpeech(wrap) {
+  if (wrap.dataset.jobId) return wrap.dataset.jobId;
+  if (!wrap._speechPromise) {
+    const text = wrap.querySelector("textarea").value;
+    wrap._speechPromise = api("/speech/synthesis", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language: ui.lang }),
+    }).then(body => {
+      wrap.dataset.jobId = body.data.job_id;
+      return body.data.job_id;
+    }).finally(() => { wrap._speechPromise = null; });
+  }
+  return wrap._speechPromise;
+}
+
+function prefetchSpeech(container) {
+  container.querySelectorAll(".listen").forEach(wrap => prepareSpeech(wrap).catch(() => {}));
+}
+
 document.addEventListener("click", async e => {
   const btn = e.target.closest("[data-speak]");
   if (!btn) return;
   const wrap = btn.closest(".listen");
-  const text = wrap.querySelector("textarea").value;
   btn.disabled = true;
   try {
-    const job = (await api("/speech/synthesis", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, language: ui.lang }),
-    })).data;
-    let status = job;
+    const jobId = await prepareSpeech(wrap);
+    let status = (await api(`/speech/synthesis/${jobId}`)).data;
     for (let i = 0; i < 240 && !["done", "failed"].includes(status.status); i++) {
       await new Promise(r => setTimeout(r, 1000));
-      status = (await api(`/speech/synthesis/${job.job_id}`)).data;
+      status = (await api(`/speech/synthesis/${jobId}`)).data;
     }
     if (status.status !== "done") throw Object.assign(new Error("tts"), { code: "tts_unavailable" });
     wrap.querySelector("audio")?.remove();
     const audio = document.createElement("audio");
     audio.controls = true;
-    audio.src = `${API}/speech/synthesis/${job.job_id}/audio`;
+    audio.src = `${API}/speech/synthesis/${jobId}/audio`;
     audio.dataset.testid = "audio";
     wrap.insertBefore(audio, wrap.querySelector(".synthetic-label"));
     audio.play().catch(() => {});

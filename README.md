@@ -237,9 +237,10 @@ Government PDFs in India frequently suffer from poor print scans or legacy non-U
 ### Text-to-Speech (TTS)
 - **Engine:** AI4Bharat's `indic-parler-tts` (`services/tts/engines.py`).
 - **Speaker Mapping:**
-  - **Maharashtra (Marathi):** Narrator `Sunita` (female) / In-App Voice `Sanjay` (male)
-  - **Madhya Pradesh (Hindi):** Narrator `Divya` (female) / In-App Voice `Rohit` (male)
-  - **Odisha (Odia):** Narrator `Debjani` (female) / In-App Voice `Manas` (male)
+  - **Maharashtra (Marathi):** `Sunita` (clear recommended default; `Sanjay` remains available)
+  - **Madhya Pradesh (Hindi):** `Divya` (clear recommended default; `Rohit` remains available)
+  - **Odisha (Odia):** `Debjani` (clear recommended default; `Manas` remains available)
+  - Override them with `TTS_VOICE_MR`, `TTS_VOICE_HI`, and `TTS_VOICE_OR` after native-speaker review.
 - **Human Stylisation Prompt:**
   ```python
   PARLER_STYLE = (

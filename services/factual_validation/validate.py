@@ -63,23 +63,42 @@ def trusted_text(p: Passage) -> str:
     return mask(p.text, list(p.untrusted))
 
 
-def validate(answer: ModelAnswer, retrieved: list[Passage]) -> Validation:
+def _canonical_citation(citation: str, by_id: dict[str, Passage], aliases: dict[str, str]) -> str | None:
+    """Resolve a model-facing evidence label without weakening provenance.
+
+    Exact canonical IDs and explicit aliases are preferred. A shortened suffix
+    (for example ``p1:3``) is accepted only when it identifies exactly one of
+    the retrieved passages; ambiguous suffixes remain invalid.
+    """
+    if citation in by_id:
+        return citation
+    mapped = aliases.get(citation)
+    if mapped in by_id:
+        return mapped
+    matches = [passage_id for passage_id in by_id if passage_id.endswith(f":{citation}")]
+    return matches[0] if len(matches) == 1 else None
+
+
+def validate(answer: ModelAnswer, retrieved: list[Passage], citation_aliases: dict[str, str] | None = None) -> Validation:
     by_id = {p.passage_id: p for p in retrieved}
+    aliases = citation_aliases or {}
     accepted, rejected = [], []
     for claim in answer.claims:
         if not claim.citations:
             rejected.append(Rejected(claim, "no citation"))
             continue
-        unknown = [c for c in claim.citations if c not in by_id]
+        resolved = [_canonical_citation(c, by_id, aliases) for c in claim.citations]
+        unknown = [c for c, canonical in zip(claim.citations, resolved) if canonical is None]
         if unknown:
             rejected.append(Rejected(claim, f"citation not in retrieved evidence: {unknown}"))
             continue
-        evidence = " ".join(trusted_text(by_id[c]) for c in claim.citations)
+        canonical = list(dict.fromkeys(c for c in resolved if c is not None))
+        evidence = " ".join(trusted_text(by_id[c]) for c in canonical)
         missing = _unsupported_values(claim.text, evidence)
         if missing:
             rejected.append(Rejected(claim, f"values not found in verified text of cited passages: {missing}"))
             continue
-        accepted.append(claim)
+        accepted.append(claim.model_copy(update={"citations": canonical}))
     return Validation(accepted, rejected)
 
 

@@ -39,6 +39,16 @@ def test_invented_deadline_is_removed():
     assert r.rejected and r.uncertainties
 
 
+@pytest.mark.parametrize("language", list(Language))
+def test_summary_evidence_aliases_resolve_in_every_language(language):
+    raw = model_reply({"what": [("Private hospitals must display their rates.", ["E1"])]})
+    result = summarise([P1], language, lambda _: raw)
+    section = next(s for s in result.sections if s.key == "what")
+    assert section.status == "stated"
+    assert section.claims[0].citations == ["p1"]
+    assert result.sources == [P1]
+
+
 def test_fenced_json_is_accepted_and_prose_retried():
     replies = iter(["Here you go!", "```json\n" + model_reply({"what": [("दर लावावेत.", ["p1"])]}) + "\n```"])
     r = summarise([P1], Language.MARATHI, lambda _: next(replies))

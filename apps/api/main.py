@@ -80,6 +80,7 @@ ROOT = Path(__file__).resolve().parents[2]
 API_PREFIX = "/api/v1"
 WEB_DIR = ROOT / "apps" / "web"
 CACHE_DIR = ROOT / "data" / "cache"
+GENERATION_PIPELINE_VERSION = "evidence-aliases-v2"
 FEEDBACK_FILE = ROOT / "data" / "feedback" / "feedback.jsonl"
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 MAX_UPLOAD_BYTES = MAX_FILE_BYTES  # from converter
@@ -407,7 +408,9 @@ class SummaryRequest(BaseModel):
 def create_summary(request: Request, body: SummaryRequest, refresh: bool = False):
     doc = _doc(body.document_id)
     llm = _require_llm()
-    key = hashlib.sha256(f"{doc.sha256}|{body.language.value}|{llm.model}|{len(doc.passages)}".encode()).hexdigest()[:24]
+    key = hashlib.sha256(
+        f"{GENERATION_PIPELINE_VERSION}|{doc.sha256}|{body.language.value}|{llm.model}|{len(doc.passages)}".encode()
+    ).hexdigest()[:24]
     cache = CACHE_DIR / "summaries" / f"{key}.json"
     cached = _read_cache(cache) if cache.exists() and not refresh else None
     if cached is not None:
@@ -476,7 +479,9 @@ def question_answer(request: Request, body: QaRequest, refresh: bool = False):
     # recorded demos show exactly the answer that was checked). refresh=true asks again.
     question = " ".join(body.question.split())
     passages_n = len(index.passages)
-    key = hashlib.sha256(f"{scope}|{passages_n}|{body.language.value}|{llm.model}|{question}".encode()).hexdigest()[:24]
+    key = hashlib.sha256(
+        f"{GENERATION_PIPELINE_VERSION}|{scope}|{passages_n}|{body.language.value}|{llm.model}|{question}".encode()
+    ).hexdigest()[:24]
     cache = CACHE_DIR / "answers" / f"{key}.json"
     cached = _read_cache(cache) if cache.exists() and not refresh else None
     if cached is not None:

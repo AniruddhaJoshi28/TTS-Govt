@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, HttpUrl
+from pydantic import AnyUrl, BaseModel
 
 from schemas.api.envelope import Language, State
 
@@ -12,7 +12,7 @@ DEMO_MANIFEST = Path(__file__).parents[2] / "data" / "demo" / "documents.yaml"
 
 
 class FetchSpec(BaseModel):
-    method: str  # "direct" | "mp_labour_dms"
+    method: str  # "direct" | "mp_labour_dms" | "upload"
     path: str | None = None
 
 
@@ -26,8 +26,8 @@ class DocumentEntry(BaseModel):
     department_en: str
     title: str
     title_en: str
-    url: HttpUrl
-    listing_url: HttpUrl
+    url: AnyUrl
+    listing_url: AnyUrl
     fetch: FetchSpec
     portal_metadata: dict[str, str] = {}
 

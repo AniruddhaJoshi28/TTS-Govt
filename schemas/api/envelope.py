@@ -24,6 +24,7 @@ class State(StrEnum):
     MAHARASHTRA = "MH"
     MADHYA_PRADESH = "MP"
     ODISHA = "OD"
+    UPLOADED = "UP"  # user-uploaded documents not tied to a specific state
 
 
 class SourceRef(BaseModel):

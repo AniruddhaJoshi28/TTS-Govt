@@ -33,7 +33,13 @@ const I18N = {
       portal_metadata: "अधिकृत पोर्टलवरील माहिती" },
     placeholder: "आपला प्रश्न इथे लिहा", noDocs: "या राज्यासाठी दस्तऐवज अजून उपलब्ध नाहीत.",
     micDenied: "मायक्रोफोन वापरण्याची परवानगी मिळाली नाही.",
-    docType: { circular: "परिपत्रक", notification: "अधिसूचना", gr: "शासन निर्णय" },
+    docType: { circular: "परिपत्रक", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड केलेला दस्तऐवज" },
+    uploadTab: "दस्तऐवज अपलोड", uploadTitle: "दस्तऐवज अपलोड करा",
+    uploadHint: "कोणतीही PDF, DOCX, TXT, RTF, ODT किंवा इमेज फाइल येथे टाका — किंवा निवडा.",
+    dropText: "फाइल येथे ड्रॅग आणि ड्रॉप करा", dropOr: "— किंवा —", browseFiles: "फाइल निवडा",
+    uploading: "अपलोड होत आहे…", converting: "प्रक्रिया सुरू आहे…",
+    uploadSuccess: "दस्तऐवज यशस्वीरित्या जोडला गेला!", selectDoc: "दस्तऐवज निवडा",
+    noUploadsYet: "अजून कोणतेही दस्तऐवज अपलोड केलेले नाहीत. सुरू करण्यासाठी वर फाइल अपलोड करा.",
   },
   hi: {
     appName: "शासकीय आदेश सहायक", tagline: "सरकारी आदेश, आसान भाषा में", language: "भाषा",
@@ -66,7 +72,13 @@ const I18N = {
       portal_metadata: "आधिकारिक पोर्टल की जानकारी" },
     placeholder: "अपना सवाल यहाँ लिखें", noDocs: "इस राज्य के दस्तावेज़ अभी उपलब्ध नहीं हैं।",
     micDenied: "माइक्रोफ़ोन की अनुमति नहीं मिली।",
-    docType: { circular: "परिपत्र", notification: "अधिसूचना", gr: "शासन निर्णय" },
+    docType: { circular: "परिपत्र", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड किया गया दस्तावेज़" },
+    uploadTab: "दस्तावेज़ अपलोड", uploadTitle: "दस्तावेज़ अपलोड करें",
+    uploadHint: "कोई भी PDF, DOCX, TXT, RTF, ODT या इमेज फ़ाइल यहाँ डालें — या चुनें।",
+    dropText: "फ़ाइल यहाँ ड्रैग और ड्रॉप करें", dropOr: "— या —", browseFiles: "फ़ाइल चुनें",
+    uploading: "अपलोड हो रहा है…", converting: "प्रोसेस हो रहा है…",
+    uploadSuccess: "दस्तावेज़ सफलतापूर्वक जोड़ा गया!", selectDoc: "दस्तावेज़ चुनें",
+    noUploadsYet: "अभी तक कोई दस्तावेज़ अपलोड नहीं किया गया है। शुरू करने के लिए ऊपर फ़ाइल अपलोड करें।",
   },
   or: {
     appName: "ସରକାରୀ ଆଦେଶ ସହାୟକ", tagline: "ସରକାରୀ ଆଦେଶ, ସରଳ ଭାଷାରେ", language: "ଭାଷା",
@@ -99,7 +111,13 @@ const I18N = {
       portal_metadata: "ସରକାରୀ ପୋର୍ଟାଲର ତଥ୍ୟ" },
     placeholder: "ଆପଣଙ୍କ ପ୍ରଶ୍ନ ଏଠାରେ ଲେଖନ୍ତୁ", noDocs: "ଏହି ରାଜ୍ୟ ପାଇଁ ଦଲିଲ ଏପର୍ଯ୍ୟନ୍ତ ଉପଲବ୍ଧ ନାହିଁ।",
     micDenied: "ମାଇକ୍ରୋଫୋନ ଅନୁମତି ମିଳିଲା ନାହିଁ।",
-    docType: { circular: "ପରିପତ୍ର", notification: "ବିଜ୍ଞପ୍ତି", gr: "ସରକାରୀ ନିଷ୍ପତ୍ତି" },
+    docType: { circular: "ପରିପତ୍ର", notification: "ବିଜ୍ଞପ୍ତି", gr: "ସରକାରୀ ନିଷ୍ପତ୍ତି", uploaded: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ" },
+    uploadTab: "ଦଲିଲ ଅପଲୋଡ", uploadTitle: "ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
+    uploadHint: "ଯେକୌଣସି PDF, DOCX, TXT, RTF, ODT ବା ଇମେଜ୍ ଫାଇଲ୍ ଏଠାରେ ପକାନ୍ତୁ — ବା ବାଛନ୍ତୁ।",
+    dropText: "ଫାଇଲ୍ ଏଠାରେ ଡ୍ରାଗ୍ ଓ ଡ୍ରପ୍ କରନ୍ତୁ", dropOr: "— କିମ୍ବା —", browseFiles: "ଫାଇଲ୍ ବାଛନ୍ତୁ",
+    uploading: "ଅପଲୋଡ ହେଉଛି…", converting: "ପ୍ରକ୍ରିୟା ଚାଲିଛି…",
+    uploadSuccess: "ଦଲିଲ ସଫଳତାର ସହ ଯୋଡ଼ାଗଲା!", selectDoc: "ଦଲିଲ ବାଛନ୍ତୁ",
+    noUploadsYet: "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଦଲିଲ ଅପଲୋଡ ହୋଇନାହିଁ। ଆରମ୍ଭ କରିବା ପାଇଁ ଉପରେ ଫାଇଲ୍ ଅପଲୋଡ କରନ୍ତୁ।",
   },
   en: {
     appName: "Government Order Assistant", tagline: "Official government orders, in plain language", language: "Language",
@@ -132,13 +150,20 @@ const I18N = {
       portal_metadata: "Information from the official portal" },
     placeholder: "Type your question here", noDocs: "No documents are available for this state yet.",
     micDenied: "Microphone permission was not granted.",
-    docType: { circular: "Circular", notification: "Notification", gr: "Government Resolution" },
+    docType: { circular: "Circular", notification: "Notification", gr: "Government Resolution", uploaded: "Uploaded Document" },
+    uploadTab: "Upload", uploadTitle: "Upload a Document",
+    uploadHint: "Drop any PDF, DOCX, TXT, RTF, ODT, or image file here — or click to browse.",
+    dropText: "Drag & drop your file here", dropOr: "— or —", browseFiles: "Browse Files",
+    uploading: "Uploading…", converting: "Processing document…",
+    uploadSuccess: "Document uploaded successfully! Ready for summaries and questions.",
+    selectDoc: "Select Document",
+    noUploadsYet: "No documents uploaded yet. Upload a document above to get started.",
   },
 };
 
-const STATE_LANG = { MH: "mr", MP: "hi", OD: "or" };
+const STATE_LANG = { MH: "mr", MP: "hi", OD: "or", UP: "mr" };
 const API = "/api/v1";
-const ui = { state: "MH", lang: "mr", doc: null, detail: null, passages: {}, lastAnswer: "" };
+const ui = { state: "MH", lang: "mr", doc: null, detail: null, docs: [], passages: {}, lastAnswer: "" };
 const $ = sel => document.querySelector(sel);
 const t = () => I18N[ui.lang];
 
@@ -152,19 +177,23 @@ async function api(path, options = {}) {
   try { body = await resp.json(); } catch { /* non-JSON */ }
   if (!resp.ok || !body || body.error) {
     const code = body && body.error ? body.error.code : "generic";
-    const err = new Error(code);
+    const msg = body && body.error ? body.error.message : null;
+    const err = new Error(msg || code);
     err.code = code;
     throw err;
   }
   return body;
 }
 
-function errorText(err) { return t().errors[err.code] || t().errors.generic; }
+function errorText(err) { return t().errors[err.code] || err.message || t().errors.generic; }
 
 function applyStaticText() {
   document.documentElement.lang = ui.lang;
   document.title = t().appName;
-  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t()[el.dataset.i18n]; });
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const val = t()[el.dataset.i18n];
+    if (typeof val === "string") el.textContent = val;
+  });
   $("#question").placeholder = t().placeholder;
   $("#language").value = ui.lang;
   document.querySelectorAll(".states button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.state === ui.state)));
@@ -180,32 +209,93 @@ const ODIA_MONTHS = ["ଜାନୁଆରୀ", "ଫେବୃଆରୀ", "ମା�
 const odiaDigits = n => String(n).replace(/\d/g, c => "୦୧୨୩୪୫୬୭୮୯"[c]);
 
 function fmtDate(iso) {
+  if (!iso) return "";
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso);
   if (ui.lang === "or") return `${odiaDigits(d.getDate())} ${ODIA_MONTHS[d.getMonth()]} ${odiaDigits(d.getFullYear())}`;
-  const locale = { mr: "mr-IN", hi: "hi-IN", en: "en-IN" }[ui.lang];
+  const locale = { mr: "mr-IN", hi: "hi-IN", en: "en-IN" }[ui.lang] || "en-IN";
   return d.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
 }
 
-// -- document card -----------------------------------------------------------
+// -- document card & selector ------------------------------------------------
 
-async function loadState(state, lang) {
-  ui.state = state;
-  ui.lang = lang || STATE_LANG[state];
-  ui.doc = ui.detail = null;
+function renderDocSwitcher() {
+  const switcher = $("#doc-switcher");
+  if (!switcher) return;
+  if (!ui.docs || ui.docs.length <= 1) {
+    switcher.style.display = "none";
+    switcher.innerHTML = "";
+    return;
+  }
+  const s = t();
+  const options = ui.docs.map(d => {
+    const title = ui.lang === "en" ? (d.title_en || d.title) : d.title;
+    const sel = d.id === (ui.doc && ui.doc.id) ? " selected" : "";
+    return `<option value="${esc(d.id)}"${sel}>${esc(title)} (${esc(d.pages)} ${ui.lang === "mr" ? "पृष्ठे" : "pages"})</option>`;
+  }).join("");
+  switcher.style.display = "flex";
+  switcher.innerHTML = `<label for="doc-select">${esc(s.selectDoc)}:</label>
+    <select id="doc-select" data-testid="doc-select">${options}</select>`;
+  $("#doc-select").addEventListener("change", e => selectDocument(e.target.value));
+}
+
+async function selectDocument(docId) {
+  const target = ui.docs.find(d => d.id === docId);
+  if (!target) return;
+  ui.doc = target;
+  ui.detail = null;
   ui.passages = {};
-  applyStaticText();
   $("#summary").innerHTML = "";
   $("#answer").innerHTML = "";
   $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
   const card = $("#doc-card");
   card.innerHTML = `<p class="loading">${esc(t().loading)}</p>`;
   try {
+    ui.detail = (await api(`/documents/${encodeURIComponent(ui.doc.id)}`)).data;
+    ui.detail.passages.forEach(p => { ui.passages[p.passage_id] = p; });
+    renderDocCard();
+    renderDocSwitcher();
+  } catch (err) {
+    card.innerHTML = `<p class="error">${esc(errorText(err))}</p>`;
+  }
+}
+
+async function loadState(state, lang) {
+  ui.state = state;
+  ui.lang = lang || STATE_LANG[state] || "mr";
+  ui.doc = ui.detail = null;
+  ui.docs = [];
+  ui.passages = {};
+  applyStaticText();
+  $("#summary").innerHTML = "";
+  $("#answer").innerHTML = "";
+  $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
+
+  const uploadSec = $("#upload-section");
+  if (uploadSec) {
+    uploadSec.style.display = (state === "UP") ? "block" : "none";
+  }
+  const switcher = $("#doc-switcher");
+  if (switcher) switcher.style.display = "none";
+
+  const card = $("#doc-card");
+  card.innerHTML = `<p class="loading">${esc(t().loading)}</p>`;
+  try {
     const docs = (await api(`/documents?state=${state}`)).data;
-    if (!docs.length) { card.innerHTML = `<p class="muted">${esc(t().noDocs)}</p>`; return; }
+    ui.docs = docs;
+    if (!docs.length) {
+      if (state === "UP") {
+        card.innerHTML = `<p class="muted">${esc(t().noUploadsYet)}</p>`;
+      } else {
+        card.innerHTML = `<p class="muted">${esc(t().noDocs)}</p>`;
+      }
+      return;
+    }
     ui.doc = docs[0];
     ui.detail = (await api(`/documents/${encodeURIComponent(ui.doc.id)}`)).data;
     ui.detail.passages.forEach(p => { ui.passages[p.passage_id] = p; });
     renderDocCard();
+    renderDocSwitcher();
   } catch (err) {
     card.innerHTML = `<p class="error">${esc(errorText(err))}</p>`;
   }
@@ -213,21 +303,28 @@ async function loadState(state, lang) {
 
 function renderDocCard() {
   const d = ui.doc, s = t();
+  if (!d || !ui.detail) return;
   const reasons = new Set(ui.detail.pages.map(p => p.reason));
   const badges = [];
   if (reasons.has("corrupt_encoding")) badges.push(`<span class="badge warn">${esc(s.badgeOcrCorrupt)}</span>`);
   if (reasons.has("no_text")) badges.push(`<span class="badge warn">${esc(s.badgeOcrScan)}</span>`);
   if (d.untrusted_numbers) badges.push(`<span class="badge warn">${esc(s.badgeUnverified(d.untrusted_numbers))}</span>`);
   if (d.reviewed_passages) badges.push(`<span class="badge ok">${esc(s.badgeReviewed(d.reviewed_passages))}</span>`);
-  const title = ui.lang === "en" ? d.title_en : d.title;
-  const dept = ui.lang === "en" ? d.department_en : d.department;
+  const title = ui.lang === "en" ? (d.title_en || d.title) : d.title;
+  const dept = ui.lang === "en" ? (d.department_en || d.department) : d.department;
+
+  const isFileUri = d.url && d.url.startsWith("file://");
+  const sourceLink = isFileUri
+    ? `<span>${esc(s.officialSource)}: Local Upload</span>`
+    : `<a href="${esc(d.url)}" target="_blank" rel="noopener" data-testid="official-link">${esc(s.officialSource)} ↗</a>`;
+
   $("#doc-card").innerHTML = `
     <div class="kicker">${esc(s.docType[d.document_type] || d.document_type)} · ${esc(dept)}</div>
     <h1>${esc(title)}</h1>
     <div class="meta">
       <span>${esc(s.issued)}: ${esc(fmtDate(d.issued))}</span>
       <span>${esc(s.retrieved)}: ${esc(fmtDate(d.retrieved_at))}</span>
-      <a href="${esc(d.url)}" target="_blank" rel="noopener" data-testid="official-link">${esc(s.officialSource)} ↗</a>
+      ${sourceLink}
     </div>
     <div class="badges">${badges.join("")}</div>`;
 }
@@ -252,14 +349,19 @@ function showSource(pid) {
   const p = ui.passages[pid];
   if (!p) return;
   const s = t();
+  const isFileUri = ui.doc && ui.doc.listing_url && ui.doc.listing_url.startsWith("file://");
+  const fallbackLink = isFileUri
+    ? `<p class="muted">Local Document</p>`
+    : `<p class="muted"><a href="${esc(ui.doc.listing_url)}" target="_blank" rel="noopener">${esc(s.officialSource)} ↗</a></p>`;
+
   const img = p.page > 0
     ? `<img src="${API}/documents/${encodeURIComponent(ui.doc.id)}/pages/${p.page}.png" alt="${esc(pageLabel(pid))}" loading="lazy">`
-    : `<p class="muted"><a href="${esc(ui.doc.listing_url)}" target="_blank" rel="noopener">${esc(s.officialSource)} ↗</a></p>`;
-  const legend = p.untrusted.length ? `<p class="hint">${esc(s.unverifiedLegend)}</p>` : "";
+    : fallbackLink;
+  const legend = p.untrusted && p.untrusted.length ? `<p class="hint">${esc(s.unverifiedLegend)}</p>` : "";
   $("#source-body").innerHTML = `
     <div class="badges"><span class="badge">${esc(pageLabel(pid))}</span>
       <span class="badge ${p.origin === "reviewed" ? "ok" : ""}">${esc(s.origin[p.origin] || p.origin)}</span></div>
-    <div class="passage" data-testid="passage">${markUntrusted(p.text, p.untrusted)}</div>${legend}${img}`;
+    <div class="passage" data-testid="passage">${markUntrusted(p.text, p.untrusted || [])}</div>${legend}${img}`;
   if (window.matchMedia("(max-width: 900px)").matches) $("#source-panel").scrollIntoView({ behavior: "smooth" });
 }
 
@@ -437,17 +539,125 @@ document.addEventListener("click", async e => {
   } catch { /* feedback is best effort */ }
 });
 
+// -- upload pipeline ---------------------------------------------------------
+
+async function uploadFile(file) {
+  if (!file) return;
+  const s = t();
+  const prog = $("#upload-progress");
+  const fill = $("#progress-fill");
+  const status = $("#upload-status");
+  const result = $("#upload-result");
+
+  prog.style.display = "block";
+  fill.style.width = "30%";
+  status.textContent = `${s.uploading} (${file.name})`;
+  result.innerHTML = "";
+
+  const formData = new FormData();
+  formData.append("file", file);
+  if (ui.state && ui.state !== "UP") {
+    formData.append("state", ui.state);
+  }
+
+  try {
+    fill.style.width = "65%";
+    status.textContent = s.converting;
+
+    const resp = await fetch(`${API}/upload`, {
+      method: "POST",
+      body: formData,
+    });
+    const body = await resp.json();
+    if (!resp.ok || !body || body.error) {
+      const code = body && body.error ? body.error.code : "generic";
+      const msg = body && body.error ? body.error.message : t().errors.generic;
+      throw new Error(msg || code);
+    }
+
+    fill.style.width = "100%";
+    status.textContent = s.uploadSuccess;
+    const resData = body.data;
+    result.innerHTML = `
+      <div class="upload-result-box" data-testid="upload-success">
+        <h3>✓ ${esc(resData.message || s.uploadSuccess)}</h3>
+        <div class="meta-grid">
+          <span class="label">File:</span><span>${esc(resData.filename)}</span>
+          <span class="label">Format:</span><span>${esc((resData.original_format || "").toUpperCase())} ➔ PDF</span>
+          <span class="label">Pages:</span><span>${esc(resData.pages)}</span>
+          <span class="label">Passages:</span><span>${esc(resData.passages)}</span>
+          <span class="label">Language:</span><span>${esc(resData.detected_language)}</span>
+        </div>
+      </div>`;
+
+    // Refresh state and select the newly uploaded document
+    const targetState = ui.state === "UP" ? "UP" : (resData.state || "UP");
+    await loadState(targetState);
+    if (resData.document_id) {
+      await selectDocument(resData.document_id);
+    }
+  } catch (err) {
+    fill.style.width = "100%";
+    fill.style.background = "var(--flag)";
+    status.textContent = "Upload failed";
+    result.innerHTML = `<div class="upload-error-box" data-testid="upload-error">⚠️ ${esc(err.message || errorText(err))}</div>`;
+  } finally {
+    setTimeout(() => {
+      prog.style.display = "none";
+      fill.style.width = "0%";
+      fill.style.background = "";
+    }, 4000);
+    const input = $("#file-input");
+    if (input) input.value = "";
+  }
+}
+
+const dropZone = $("#drop-zone");
+const fileInput = $("#file-input");
+if (dropZone && fileInput) {
+  ["dragenter", "dragover"].forEach(evt => {
+    dropZone.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add("drag-over");
+    });
+  });
+  ["dragleave", "dragend", "drop"].forEach(evt => {
+    dropZone.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove("drag-over");
+    });
+  });
+  dropZone.addEventListener("drop", e => {
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length) {
+      uploadFile(dt.files[0]);
+    }
+  });
+  fileInput.addEventListener("change", e => {
+    if (e.target.files && e.target.files.length) {
+      uploadFile(e.target.files[0]);
+    }
+  });
+}
+
 // -- wiring ------------------------------------------------------------------
 
 document.querySelectorAll(".states button").forEach(b => b.addEventListener("click", () => loadState(b.dataset.state)));
 $("#language").addEventListener("change", e => {
   ui.lang = e.target.value;
   applyStaticText();
-  if (ui.detail) renderDocCard();
+  if (ui.detail) {
+    renderDocCard();
+    renderDocSwitcher();
+  }
   $("#summary").innerHTML = "";
   $("#answer").innerHTML = "";
 });
 $("#btn-summary").addEventListener("click", createSummary);
 
 const params = new URLSearchParams(location.search);
-loadState(params.get("state") in STATE_LANG ? params.get("state") : "MH", params.get("lang") in I18N ? params.get("lang") : null);
+const initialState = params.get("state") in STATE_LANG ? params.get("state") : "MH";
+const initialLang = params.get("lang") in I18N ? params.get("lang") : null;
+loadState(initialState, initialLang);

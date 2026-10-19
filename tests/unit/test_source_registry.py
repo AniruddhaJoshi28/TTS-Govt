@@ -7,7 +7,8 @@ from services.source_registry.registry import Source, load_sources
 
 def test_registry_loads_and_covers_all_states():
     sources = load_sources()
-    assert {s.state for s in sources} == set(State)
+    regional_states = {s for s in State if s != State.UPLOADED}
+    assert {s.state for s in sources} == regional_states
 
 
 def test_nothing_is_crawlable_before_source_discovery():

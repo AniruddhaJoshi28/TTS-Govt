@@ -42,6 +42,11 @@ import wave
 from datetime import datetime, timezone
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 import numpy as np
 import requests
 import yaml
@@ -62,7 +67,7 @@ LANGUAGE_NAMES = {"mr": "marathi", "hi": "hindi", "or": "odia", "en": "english"}
 STUB_MODEL = re.compile(r"stub|fake|test|mock", re.I)
 ANSWER_DONE = "#answer .claim, [data-testid=answer-insufficient], #answer .error"
 SENTENCE_PAUSE_S = 0.45
-SCENE_GAP_S = 0.7
+SCENE_GAP_S = 0.75
 MIN_MEAN_VOLUME_DB = -45.0
 
 
@@ -251,37 +256,47 @@ OVERLAY_JS = r"""
 (cfg) => {
   const style = document.createElement('style');
   style.textContent = `
-    #demo-label{position:fixed;bottom:40px;right:24px;z-index:10001;background:rgba(75,42,138,.94);color:#fff;
-      font:600 19px/1.3 var(--font);padding:8px 14px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.25);max-width:300px}
-    #demo-caption{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:10001;max-width:1180px;
-      background:rgba(18,22,30,.88);color:#fff;font:500 30px/1.5 var(--font);padding:14px 26px;border-radius:12px;
-      text-align:center;transition:opacity .25s}
-    #demo-caption:empty{opacity:0}
+    #demo-label{position:fixed;bottom:24px;right:24px;z-index:10001;background:rgba(30,41,59,.92);color:#f1f5f9;
+      font:600 15px/1.3 var(--font, system-ui, sans-serif);padding:7px 14px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.25);
+      backdrop-filter:blur(8px);max-width:320px;letter-spacing:0.2px;}
+    #demo-caption{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10001;max-width:1100px;
+      background:rgba(15,23,42,.92);color:#ffffff;font:500 23px/1.45 var(--font, system-ui, sans-serif);padding:10px 24px;border-radius:12px;
+      text-align:center;transition:opacity .25s;box-shadow:0 4px 20px rgba(0,0,0,.35);backdrop-filter:blur(8px);letter-spacing:0.2px;}
+    #demo-caption:empty{opacity:0;pointer-events:none;}
     #demo-cursor{position:fixed;left:0;top:0;z-index:10002;width:30px;height:30px;pointer-events:none;
-      transform:translate(960px,600px);transition:opacity .4s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
-    .demo-ripple{position:fixed;z-index:10001;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;
+      transform:translate(960px,600px);transition:opacity .4s;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+    .demo-ripple{position:fixed;z-index:10001;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;
       border:3px solid #b5651d;pointer-events:none;animation:demo-ripple .6s ease-out forwards}
     @keyframes demo-ripple{to{transform:scale(3.4);opacity:0}}
     .demo-focus{outline:4px solid #b5651d !important;outline-offset:6px;border-radius:12px;transition:outline-color .3s}
     #demo-card{position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;align-items:center;
-      justify-content:center;gap:22px;background:linear-gradient(135deg,#0b3a63,#0f4c81 55%,#1d6aa8);color:#fff;
-      transition:opacity .9s ease;font-family:var(--font);text-align:center}
-    #demo-card .t{font:700 84px/1.25 var(--font)}
-    #demo-card .s{font:400 40px/1.4 var(--font);opacity:.92}
-    #demo-card .f{font:500 26px/1.4 var(--font);opacity:.8;margin-top:30px}
-    #demo-card .e{font-size:110px}`;
+      justify-content:center;gap:22px;background:linear-gradient(135deg,#071e3d,#0f4c81 55%,#1d6aa8);color:#fff;
+      transition:opacity .85s ease;font-family:var(--font, system-ui, sans-serif);text-align:center}
+    #demo-card .t{font:700 78px/1.25 var(--font, system-ui, sans-serif)}
+    #demo-card .s{font:400 38px/1.4 var(--font, system-ui, sans-serif);opacity:.92}
+    #demo-card .f{font:500 24px/1.4 var(--font, system-ui, sans-serif);opacity:.85;margin-top:24px}
+    #demo-card .e{font-size:100px}`;
   document.head.appendChild(style);
   const add = (tag, id, html) => { const e = document.createElement(tag); e.id = id; if (html) e.innerHTML = html; document.body.appendChild(e); return e; };
   const label = add('div', 'demo-label'); label.textContent = cfg.label;
   const caption = add('div', 'demo-caption');
   const cursor = add('div', 'demo-cursor',
-    '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M4 2 L4 20 L9 15.5 L12.5 22 L15.5 20.5 L12 14 L19 14 Z" fill="#fff" stroke="#1d2433" stroke-width="1.6" stroke-linejoin="round"/></svg>');
+    '<svg viewBox="0 0 24 24" width="30" height="30"><path d="M4 2 L4 20 L9 15.5 L12.5 22 L15.5 20.5 L12 14 L19 14 Z" fill="#fff" stroke="#0f172a" stroke-width="1.8" stroke-linejoin="round"/></svg>');
   const card = add('div', 'demo-card');
   const pos = {x: 960, y: 600};
+
+  // Heartbeat to keep compositor painting at steady cadence
+  let hb = 0;
+  const dot = document.createElement('div');
+  dot.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01;pointer-events:none;';
+  document.body.appendChild(dot);
+  const beat = () => { hb++; dot.textContent = hb % 2 === 0 ? '.' : ' '; requestAnimationFrame(beat); };
+  requestAnimationFrame(beat);
+
   window.__demo = {
     caption: t => { caption.textContent = t; },
     moveTo: (x, y, ms) => {
-      cursor.style.transition = `transform ${ms}ms cubic-bezier(.45,.05,.25,1)`;
+      cursor.style.transition = `transform ${ms}ms cubic-bezier(.35,.1,.25,1)`;
       cursor.style.transform = `translate(${x}px, ${y}px)`; pos.x = x; pos.y = y;
     },
     click: () => {
@@ -322,7 +337,7 @@ class Recorder:
 
     async def start(self):
         self.cdp.on("Page.screencastFrame", lambda p: asyncio.ensure_future(self._frame(p)))
-        await self.cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 92, "maxWidth": WIDTH,
+        await self.cdp.send("Page.startScreencast", {"format": "png", "maxWidth": WIDTH,
                                                      "maxHeight": HEIGHT, "everyNthFrame": 1})
         for _ in range(100):
             if self.frames:
@@ -332,7 +347,7 @@ class Recorder:
 
     async def _frame(self, params):
         ts = time.time()
-        path = self.dir / f"f{len(self.frames):06d}.jpg"
+        path = self.dir / f"f{len(self.frames):06d}.png"
         path.write_bytes(base64.b64decode(params["data"]))
         self.frames.append((ts, str(path)))
         try:
@@ -384,10 +399,17 @@ async def record(api: Api, base_url: str, state: str, video: dict, narration: di
 
     lang = video["language"]
     cues, clips, observed = [], [], {}
-    args = []
+    args = [
+        f"--window-size={WIDTH},{HEIGHT}",
+        "--force-device-scale-factor=1",
+        "--disable-features=Translate",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+    ]
     if question_audio:
-        args = ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream",
-                f"--use-file-for-fake-audio-capture={question_audio.resolve()}%noloop"]
+        args += ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream",
+                 f"--use-file-for-fake-audio-capture={question_audio.resolve()}%noloop"]
     async with async_playwright() as p:
         browser = await p.chromium.launch(args=args)
         ctx = await browser.new_context(viewport={"width": WIDTH, "height": HEIGHT}, device_scale_factor=1,
@@ -521,15 +543,18 @@ def assemble(frames: list, t0: float, t_end: float, audio_wav: Path, srt: Path, 
     listing = workdir / "frames.ffconcat"
     listing.write_text(concat_list(frames, t_end), encoding="utf-8")
     cmd = [ffmpeg(), "-y", "-loglevel", "error",
-           "-f", "concat", "-safe", "0", "-i", str(listing), "-i", str(audio_wav), "-i", str(srt),
-           "-map", "0:v", "-map", "1:a", "-map", "2:s",
-           # JPEG frames are full-range; convert to standard (TV) range so every player shows true colours.
+           "-f", "concat", "-safe", "0", "-i", str(listing), "-i", str(audio_wav),
+           "-map", "0:v", "-map", "1:a",
            "-vf", f"scale={WIDTH}:{HEIGHT}:flags=lanczos:in_range=pc:out_range=tv,fps=30,format=yuv420p",
-           "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-tune", "stillimage", "-profile:v", "high",
+           "-fps_mode", "cfr",
+           "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-profile:v", "high", "-level:v", "4.1",
+           "-g", "60", "-keyint_min", "30", "-sc_threshold", "0",
            "-pix_fmt", "yuv420p", "-color_range", "tv", "-colorspace", "bt709", "-color_primaries", "bt709",
            "-color_trc", "bt709",
-           "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", "-c:s", "mov_text",
-           "-metadata:s:a:0", f"language={ISO639_2[lang]}", "-metadata:s:s:0", f"language={ISO639_2[lang]}",
+           "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2",
+           "-disposition:a:0", "default",
+           "-metadata:s:a:0", f"language={ISO639_2[lang]}",
+           "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
            "-t", f"{t_end - t0:.2f}", "-movflags", "+faststart", str(out_mp4)]
     subprocess.run(cmd, check=True)
 
@@ -576,7 +601,7 @@ def main() -> int:
     work = out / "work"
     shutil.rmtree(work, ignore_errors=True)  # may leave files behind if something holds a lock
     (work / "frames").mkdir(parents=True, exist_ok=True)
-    for stale in (work / "frames").glob("*.jpg"):
+    for stale in (work / "frames").glob("*.*"):
         stale.unlink(missing_ok=True)
     api = Api(args.base_url, args.api_key)
 

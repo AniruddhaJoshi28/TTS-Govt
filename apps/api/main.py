@@ -14,27 +14,48 @@ endpoint returns an explicit error envelope.
 
 import hashlib
 import json
+import logging
 import os
+import re as _re
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, Query, Request
+from fastapi import Depends, FastAPI, File, Form, Header, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from schemas.api.envelope import Envelope, ErrorDetail, Language, SourceRef, State, Uncertainty
-from services.document_ingestion.corpus import CorpusDocument, load_corpus
+from services.document_ingestion.converter import (
+    ALLOWED_EXTENSIONS,
+    ALLOWED_LABEL,
+    MAX_FILE_BYTES,
+    ConversionError,
+    UnsupportedFormat,
+    detect_language,
+    detect_type,
+    to_pdf,
+)
+from services.document_ingestion.corpus import (
+    CorpusDocument,
+    build_document,
+    load_corpus,
+    render_page_images,
+    save,
+)
 from services.document_ingestion.manifest import DocumentEntry
+from services.pdf_ocr.extract import extract_pages
 from services.retrieval.bm25 import BM25Index, Passage
 from services.slm_orchestrator.answer import answer
 from services.slm_orchestrator.llm import LLMConfig, LLMUnavailable, OpenAICompatibleLLM
 from services.slm_orchestrator.summarise import summarise
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 API_PREFIX = "/api/v1"
@@ -42,6 +63,7 @@ WEB_DIR = ROOT / "apps" / "web"
 CACHE_DIR = ROOT / "data" / "cache"
 FEEDBACK_FILE = ROOT / "data" / "feedback" / "feedback.jsonl"
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_BYTES = MAX_FILE_BYTES  # from converter
 
 class ApiError(Exception):
     def __init__(self, status: int, code: str, message: str, retryable: bool = False):
@@ -539,6 +561,193 @@ def feedback(request: Request, body: FeedbackRequest):
     with rt.lock, FEEDBACK_FILE.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
     return Envelope[dict](request_id=request.state.request_id, language=body.language, data={"received": True})
+
+
+# -- document upload ---------------------------------------------------------
+
+class UploadResult(BaseModel):
+    document_id: str
+    filename: str
+    original_format: str
+    detected_language: str
+    state: str
+    pages: int
+    passages: int
+    message: str
+
+
+class FormatsOut(BaseModel):
+    extensions: list[str]
+    max_size_mb: int
+    description: str
+
+
+@app.get(f"{API_PREFIX}/upload/formats", response_model=Envelope[FormatsOut])
+def upload_formats(request: Request):
+    """Return the list of accepted file formats and size limits."""
+    return Envelope[FormatsOut](
+        request_id=request.state.request_id,
+        language=Language.ENGLISH,
+        data=FormatsOut(
+            extensions=sorted(ALLOWED_EXTENSIONS),
+            max_size_mb=int(MAX_UPLOAD_BYTES / (1024 * 1024)),
+            description=ALLOWED_LABEL,
+        ),
+    )
+
+
+@app.post(f"{API_PREFIX}/upload", response_model=Envelope[UploadResult],
+          dependencies=[Depends(require_key)])
+async def upload_document(
+    request: Request,
+    file: UploadFile = File(..., description="Document file to upload"),
+    language: Language | None = Form(default=None, description="Override auto-detected language"),
+    state: State | None = Form(default=None, description="State this document belongs to"),
+    title: str = Form(default="", description="Document title (auto-generated if empty)"),
+):
+    """Upload any supported document, convert to PDF, ingest, and make it
+    immediately available for summaries and Q&A."""
+    # -- read and validate -----------------------------------------------
+    content = await file.read()
+    if not content:
+        raise ApiError(400, "empty_file", "The uploaded file is empty.")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise ApiError(
+            413, "file_too_large",
+            f"File is {len(content) / (1024*1024):.1f} MB; limit is "
+            f"{MAX_UPLOAD_BYTES / (1024*1024):.0f} MB.",
+        )
+
+    filename = file.filename or "document"
+    ext = Path(filename).suffix.lower()
+
+    # Stable document ID from filename and content hash
+    content_sha = hashlib.sha256(content).hexdigest()
+    safe_name = _re.sub(r"[^a-zA-Z0-9_-]", "-", Path(filename).stem.lower())[:50]
+    doc_id = f"upload-{safe_name}-{content_sha[:10]}"
+
+    # Fast-path check if already ingested
+    if doc_id in rt.corpus:
+        existing = rt.corpus[doc_id]
+        return Envelope[UploadResult](
+            request_id=request.state.request_id,
+            language=existing.entry.language,
+            data=UploadResult(
+                document_id=doc_id,
+                filename=filename,
+                original_format=detect_type(filename, content),
+                detected_language=existing.entry.language.value,
+                state=existing.entry.state.value,
+                pages=len(existing.pages),
+                passages=len(existing.passages),
+                message="Document was already uploaded and is ready for questions.",
+            ),
+        )
+
+    # -- convert to PDF --------------------------------------------------
+    try:
+        original_type = detect_type(filename, content)
+        pdf_bytes = to_pdf(filename, content)
+    except UnsupportedFormat as exc:
+        raise ApiError(
+            415, "unsupported_format",
+            f"{exc}  Accepted formats: {ALLOWED_LABEL}.",
+        ) from exc
+    except ConversionError as exc:
+        raise ApiError(422, "conversion_failed", str(exc)) from exc
+
+    # -- extract text and detect language --------------------------------
+    from services.pdf_ocr.extract import InvalidPdf, extract_pages
+    try:
+        pages = extract_pages(pdf_bytes)
+    except InvalidPdf as exc:
+        raise ApiError(422, "invalid_document", str(exc)) from exc
+
+    all_text = "\n".join(p.text for p in pages if p.text)
+    detected_lang = language.value if language else detect_language(all_text)
+    # Validate the detected language is one we support.
+    try:
+        lang_enum = Language(detected_lang)
+    except ValueError:
+        lang_enum = Language.ENGLISH
+        detected_lang = "en"
+
+    # -- build corpus entry ----------------------------------------------
+    sha = hashlib.sha256(pdf_bytes).hexdigest()
+    now = datetime.now(timezone.utc)
+    doc_state = state or State.UPLOADED
+
+    doc_title = title or Path(filename).stem.replace("_", " ").replace("-", " ").title()
+
+    entry = DocumentEntry(
+        id=doc_id,
+        state=doc_state,
+        language=lang_enum,
+        document_type="uploaded",
+        issued=date.today(),
+        department="User Upload",
+        department_en="User Upload",
+        title=doc_title,
+        title_en=doc_title,
+        url=f"file:///{doc_id}",
+        listing_url=f"file:///{doc_id}",
+        fetch={"method": "upload"},
+        portal_metadata={},
+    )
+
+    # Build OCR if available.
+    ocr = None
+    try:
+        from services.pdf_ocr.ocr import TesseractOcr
+        ocr = TesseractOcr()
+    except Exception:
+        pass  # OCR not available — embedded text only.
+
+    corpus_doc = build_document(entry, pdf_bytes, sha, now, ocr)
+
+    # Save to disk.
+    save(corpus_doc, rt.corpus_dir)
+
+    # Render page images for the source panel.
+    try:
+        render_page_images(pdf_bytes, rt.corpus_dir / doc_id)
+    except Exception as exc:
+        logger.warning("Could not render page images for %s: %s", doc_id, exc)
+
+    # Hot-add to runtime (no restart needed).
+    rt.corpus[doc_id] = corpus_doc
+    rt.indexes[doc_id] = BM25Index(corpus_doc.to_passages())
+
+    logger.info(
+        "Uploaded %s: %s → %d pages, %d passages, language=%s",
+        doc_id, filename, len(corpus_doc.pages), len(corpus_doc.passages), detected_lang,
+    )
+
+    return Envelope[UploadResult](
+        request_id=request.state.request_id,
+        language=lang_enum,
+        data=UploadResult(
+            document_id=doc_id,
+            filename=filename,
+            original_format=original_type,
+            detected_language=detected_lang,
+            state=doc_state.value,
+            pages=len(corpus_doc.pages),
+            passages=len(corpus_doc.passages),
+            message="Document uploaded and ready for summaries and questions.",
+        ),
+    )
+
+
+@app.post(f"{API_PREFIX}/reload", response_model=Envelope[dict], dependencies=[Depends(require_key)])
+def reload_corpus(request: Request):
+    """Re-scan the corpus directory and rebuild all indexes."""
+    rt.reload()
+    return Envelope[dict](
+        request_id=request.state.request_id,
+        language=Language.ENGLISH,
+        data={"documents": len(rt.corpus), "reloaded": True},
+    )
 
 
 # -- web UI ------------------------------------------------------------------

@@ -165,6 +165,35 @@ def _error_body(request: Request, code: str, message: str, retryable: bool = Fal
                           error=ErrorDetail(code=code, message=message, retryable=retryable)).model_dump(mode="json")
 
 
+def _read_cache(path: Path) -> dict | None:
+    """Read a cached envelope; interrupted/corrupt files are ordinary misses."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError("cached envelope is not a JSON object")
+        return value
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        logger.warning("Ignoring invalid cache file %s: %s", path, exc)
+        return None
+
+
+def _write_cache(path: Path, payload: str) -> None:
+    """Atomically publish a cache entry so readers never see partial JSON."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(payload, encoding="utf-8")
+        temporary.replace(path)
+    except OSError as exc:
+        # Caching is an optimisation; a valid citizen response must still win.
+        logger.warning("Could not write cache file %s: %s", path, exc)
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 @app.exception_handler(ApiError)
 async def _api_error(request: Request, exc: ApiError):
     return JSONResponse(status_code=exc.status, content=_error_body(request, exc.code, exc.message, exc.retryable))
@@ -380,9 +409,10 @@ def create_summary(request: Request, body: SummaryRequest, refresh: bool = False
     llm = _require_llm()
     key = hashlib.sha256(f"{doc.sha256}|{body.language.value}|{llm.model}|{len(doc.passages)}".encode()).hexdigest()[:24]
     cache = CACHE_DIR / "summaries" / f"{key}.json"
-    if cache.exists() and not refresh:
+    cached = _read_cache(cache) if cache.exists() and not refresh else None
+    if cached is not None:
         _log_print(f"📦 [CACHE HIT] Returning cached summary for doc='{doc.entry.id}' ({body.language.value})")
-        return JSONResponse({**json.loads(cache.read_text(encoding="utf-8")), "request_id": request.state.request_id})
+        return JSONResponse({**cached, "request_id": request.state.request_id})
 
     _log_print(f"\n🚀 [API REQUEST: /summaries] Generating fresh summary for doc='{doc.entry.id}'...")
     passages = doc.to_passages()
@@ -408,8 +438,7 @@ def create_summary(request: Request, body: SummaryRequest, refresh: bool = False
         uncertainties=[Uncertainty(code="model_note", message=u) for u in result.uncertainties],
     )
     if result.status == "summarised":
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text(env.model_dump_json(), encoding="utf-8")
+        _write_cache(cache, env.model_dump_json())
     return env
 
 
@@ -449,9 +478,10 @@ def question_answer(request: Request, body: QaRequest, refresh: bool = False):
     passages_n = len(index.passages)
     key = hashlib.sha256(f"{scope}|{passages_n}|{body.language.value}|{llm.model}|{question}".encode()).hexdigest()[:24]
     cache = CACHE_DIR / "answers" / f"{key}.json"
-    if cache.exists() and not refresh:
+    cached = _read_cache(cache) if cache.exists() and not refresh else None
+    if cached is not None:
         _log_print(f"📦 [CACHE HIT] Returning cached Q&A answer for {target_name} query='{question}'")
-        return JSONResponse({**json.loads(cache.read_text(encoding="utf-8")), "request_id": request.state.request_id})
+        return JSONResponse({**cached, "request_id": request.state.request_id})
 
     _log_print(f"\n🚀 [API REQUEST: /qa] Query: \"{question}\" | Target: {target_name} | Language: {body.language.value}")
     try:
@@ -466,8 +496,7 @@ def question_answer(request: Request, body: QaRequest, refresh: bool = False):
         uncertainties=[Uncertainty(code="model_note", message=u) for u in result.uncertainties],
     )
     if result.status != "failed":
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text(env.model_dump_json(), encoding="utf-8")
+        _write_cache(cache, env.model_dump_json())
     return env
 
 

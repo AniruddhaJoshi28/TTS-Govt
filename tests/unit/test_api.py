@@ -133,6 +133,24 @@ def test_qa_answer_with_citation(monkeypatch):
     assert body["data"]["status"] == "answered" and body["sources"][0]["passage_id"] == f"{DOC_ID}:p1:1"
 
 
+def test_corrupt_qa_cache_is_regenerated(monkeypatch):
+    reply = json.dumps({"claims": [{
+        "text": "अकुशल श्रमिक की दैनिक दर 484 रुपये है।",
+        "citations": [f"{DOC_ID}:p1:1"],
+    }]}, ensure_ascii=False)
+    monkeypatch.setattr(main.rt, "llm", FakeLLM(reply))
+    request = {"question": "अकुशल श्रमिक की दैनिक दर", "language": "hi", "document_id": DOC_ID}
+    assert client.post("/api/v1/qa", json=request).status_code == 200
+
+    cache_file = next((main.CACHE_DIR / "answers").glob("*.json"))
+    cache_file.write_text("", encoding="utf-8")  # simulate an interrupted old write
+
+    response = client.post("/api/v1/qa", json=request)
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "answered"
+    assert json.loads(cache_file.read_text(encoding="utf-8"))["data"]["status"] == "answered"
+
+
 def test_tts_unavailable_is_explicit():
     resp = client.post("/api/v1/speech/synthesis", json={"text": "नमस्ते", "language": "hi"})
     assert resp.status_code == 503 and resp.json()["error"]["code"] == "tts_unavailable"

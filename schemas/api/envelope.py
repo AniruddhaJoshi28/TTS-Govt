@@ -8,7 +8,7 @@ that never expose internal secrets.
 from enum import StrEnum
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import AnyUrl, BaseModel, Field
 
 T = TypeVar("T")
 
@@ -32,7 +32,9 @@ class SourceRef(BaseModel):
 
     document_id: str
     version_id: str
-    url: HttpUrl
+    # Official corpus sources use HTTPS; user uploads deliberately use an
+    # internal file URI and are rendered through authenticated API endpoints.
+    url: AnyUrl
     page: int | None = Field(default=None, ge=1)
     passage_id: str | None = None
 

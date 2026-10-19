@@ -113,6 +113,19 @@ def test_summary_with_model_is_validated_and_cached(monkeypatch):
     assert again["data"]["sections"] == body["data"]["sections"]
 
 
+def test_uploaded_file_source_is_valid_in_summary_envelope(monkeypatch):
+    doc = main.rt.corpus[DOC_ID]
+    for passage in doc.passages:
+        passage["url"] = f"file:///{DOC_ID}"
+    reply = json.dumps({"sections": {
+        "benefits": [{"text": "अकुशल श्रमिक को 484 रुपये प्रतिदिन", "citations": [f"{DOC_ID}:p1:1"]}],
+    }}, ensure_ascii=False)
+    monkeypatch.setattr(main.rt, "llm", FakeLLM(reply))
+    response = client.post("/api/v1/summaries?refresh=true", json={"document_id": DOC_ID, "language": "hi"})
+    assert response.status_code == 200
+    assert response.json()["sources"][0]["url"] == f"file:///{DOC_ID}"
+
+
 def test_model_outage_is_retryable_error(monkeypatch):
     monkeypatch.setattr(main.rt, "llm", FakeLLM(exc=LLMUnavailable("down")))
     resp = client.post("/api/v1/qa", json={"question": "अकुशल दर?", "language": "hi", "document_id": DOC_ID})

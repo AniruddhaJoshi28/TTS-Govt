@@ -386,6 +386,12 @@ def create_summary(request: Request, body: SummaryRequest, refresh: bool = False
 
     _log_print(f"\n🚀 [API REQUEST: /summaries] Generating fresh summary for doc='{doc.entry.id}'...")
     passages = doc.to_passages()
+    if not passages:
+        raise ApiError(
+            422,
+            "document_not_searchable",
+            "This document has no readable passages. Configure OCR and upload it again before generating a summary.",
+        )
     try:
         result = summarise(passages, body.language, llm)
     except LLMUnavailable as exc:

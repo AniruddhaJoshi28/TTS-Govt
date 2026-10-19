@@ -88,6 +88,14 @@ def test_summary_without_model_fails_explicitly():
     assert resp.status_code == 503 and resp.json()["error"]["code"] == "model_not_configured"
 
 
+def test_summary_refuses_zero_passage_document_before_model_call(monkeypatch):
+    main.rt.corpus[DOC_ID] = main.rt.corpus[DOC_ID].model_copy(update={"passages": []})
+    monkeypatch.setattr(main.rt, "llm", FakeLLM(exc=AssertionError("model must not be called")))
+    resp = client.post("/api/v1/summaries", json={"document_id": DOC_ID, "language": "hi"})
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "document_not_searchable"
+
+
 def test_summary_with_model_is_validated_and_cached(monkeypatch):
     reply = json.dumps({"sections": {
         "benefits": [{"text": "अकुशल श्रमिक को 484 रुपये प्रतिदिन", "citations": [f"{DOC_ID}:p1:1"]}],

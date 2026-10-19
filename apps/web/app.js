@@ -35,6 +35,7 @@ const I18N = {
     micDenied: "मायक्रोफोन वापरण्याची परवानगी मिळाली नाही.",
     docType: { circular: "परिपत्रक", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड केलेला दस्तऐवज" },
     uploadTab: "दस्तऐवज अपलोड", uploadTitle: "दस्तऐवज अपलोड करा",
+    uploadQuickBtn: "नवीन GR अपलोड करा",
     uploadHint: "कोणतीही PDF, DOCX, TXT, RTF, ODT किंवा इमेज फाइल येथे टाका — किंवा निवडा.",
     dropText: "फाइल येथे ड्रॅग आणि ड्रॉप करा", dropOr: "— किंवा —", browseFiles: "फाइल निवडा",
     uploading: "अपलोड होत आहे…", converting: "प्रक्रिया सुरू आहे…",
@@ -74,6 +75,7 @@ const I18N = {
     micDenied: "माइक्रोफ़ोन की अनुमति नहीं मिली।",
     docType: { circular: "परिपत्र", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड किया गया दस्तावेज़" },
     uploadTab: "दस्तावेज़ अपलोड", uploadTitle: "दस्तावेज़ अपलोड करें",
+    uploadQuickBtn: "नया आदेश अपलोड करें",
     uploadHint: "कोई भी PDF, DOCX, TXT, RTF, ODT या इमेज फ़ाइल यहाँ डालें — या चुनें।",
     dropText: "फ़ाइल यहाँ ड्रैग और ड्रॉप करें", dropOr: "— या —", browseFiles: "फ़ाइल चुनें",
     uploading: "अपलोड हो रहा है…", converting: "प्रोसेस हो रहा है…",
@@ -113,6 +115,7 @@ const I18N = {
     micDenied: "ମାଇକ୍ରୋଫୋନ ଅନୁମତି ମିଳିଲା ନାହିଁ।",
     docType: { circular: "ପରିପତ୍ର", notification: "ବିଜ୍ଞପ୍ତି", gr: "ସରକାରୀ ନିଷ୍ପତ୍ତି", uploaded: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ" },
     uploadTab: "ଦଲିଲ ଅପଲୋଡ", uploadTitle: "ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
+    uploadQuickBtn: "ନୂତନ ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
     uploadHint: "ଯେକୌଣସି PDF, DOCX, TXT, RTF, ODT ବା ଇମେଜ୍ ଫାଇଲ୍ ଏଠାରେ ପକାନ୍ତୁ — ବା ବାଛନ୍ତୁ।",
     dropText: "ଫାଇଲ୍ ଏଠାରେ ଡ୍ରାଗ୍ ଓ ଡ୍ରପ୍ କରନ୍ତୁ", dropOr: "— କିମ୍ବା —", browseFiles: "ଫାଇଲ୍ ବାଛନ୍ତୁ",
     uploading: "ଅପଲୋଡ ହେଉଛି…", converting: "ପ୍ରକ୍ରିୟା ଚାଲିଛି…",
@@ -152,6 +155,7 @@ const I18N = {
     micDenied: "Microphone permission was not granted.",
     docType: { circular: "Circular", notification: "Notification", gr: "Government Resolution", uploaded: "Uploaded Document" },
     uploadTab: "Upload", uploadTitle: "Upload a Document",
+    uploadQuickBtn: "Upload GR",
     uploadHint: "Drop any PDF, DOCX, TXT, RTF, ODT, or image file here — or click to browse.",
     dropText: "Drag & drop your file here", dropOr: "— or —", browseFiles: "Browse Files",
     uploading: "Uploading…", converting: "Processing document…",
@@ -656,6 +660,15 @@ $("#language").addEventListener("change", e => {
   $("#answer").innerHTML = "";
 });
 $("#btn-summary").addEventListener("click", createSummary);
+const btnTopUpload = $("#btn-top-upload");
+if (btnTopUpload) {
+  btnTopUpload.addEventListener("click", () => {
+    loadState("UP");
+    setTimeout(() => {
+      $("#upload-section")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  });
+}
 
 const params = new URLSearchParams(location.search);
 const initialState = params.get("state") in STATE_LANG ? params.get("state") : "MH";

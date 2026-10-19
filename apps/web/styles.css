@@ -28,6 +28,16 @@ a { color: var(--primary); }
 .emblem { font-size: 1.8rem; }
 .brand-name { font-weight: 700; font-size: 1.15rem; }
 .brand-tag { opacity: .85; font-size: .9rem; }
+.topbar-actions { display: flex; gap: 1rem; align-items: center; }
+.upload-quick-btn {
+  background: rgba(255, 255, 255, 0.16); color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.45);
+  padding: .38rem .85rem; border-radius: 8px; font-size: .9rem; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: .45rem;
+  transition: all .2s ease;
+}
+.upload-quick-btn:hover {
+  background: rgba(255, 255, 255, 0.3); border-color: #fff; transform: translateY(-1px);
+}
 .lang { display: flex; gap: .5rem; align-items: center; font-size: .9rem; }
 .lang select { font: inherit; padding: .3rem .5rem; border-radius: 8px; border: 0; }
 
@@ -35,8 +45,15 @@ a { color: var(--primary); }
 .states button {
   font: inherit; font-weight: 600; padding: .55rem 1.2rem; border-radius: 999px;
   border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
+  transition: all .15s ease;
 }
 .states button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.states button.upload-tab {
+  background: #f0f7ff; border-color: #bcd7ff; color: var(--primary);
+}
+.states button.upload-tab[aria-selected="true"] {
+  background: var(--primary); color: #fff; border-color: var(--primary);
+}
 
 .layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.25rem; padding: 1.25rem 1.5rem; }
 .col-main { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }

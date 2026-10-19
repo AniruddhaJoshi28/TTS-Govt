@@ -6,6 +6,7 @@ reported as "not stated in the document" rather than filled in.
 """
 
 import json
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
@@ -16,6 +17,21 @@ from schemas.api.envelope import Language
 from services.factual_validation.validate import Claim, ModelAnswer, Rejected, _strip_fences, validate
 from services.retrieval.bm25 import Passage
 from services.slm_orchestrator.answer import LANGUAGE_NAMES, MAX_ATTEMPTS, RETRY_NOTE, _CLOSE, _OPEN, _quote
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
+def _safe_print(*args, **kwargs):
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        safe = [a.encode("ascii", errors="replace").decode("ascii") if isinstance(a, str) else a for a in args]
+        print(*safe, **kwargs)
+
 
 SECTIONS: list[tuple[str, str]] = [
     ("what", "What the document says, in one or two plain sentences"),
@@ -73,26 +89,46 @@ def build_prompt(language: Language, passages: list[Passage]) -> str:
 
 
 def summarise(passages: list[Passage], language: Language, generate: Callable[[str], str]) -> SummaryResult:
+    _safe_print(f"\n{'='*70}")
+    _safe_print(f"📑 [SUMMARISE PIPELINE START] Generating 9-point structured summary")
+    _safe_print(f"   • Target Language: {language.name} ({LANGUAGE_NAMES.get(language, 'Unknown')})")
+    _safe_print(f"   • Source Passages: {len(passages)}")
+
     prompt = build_prompt(language, passages)
+    _safe_print(f"  [Step 1/3] 📝 Assembled prompt ({len(prompt):,} chars) covering {len(SECTIONS)} citizen sections")
+
+    _safe_print(f"  [Step 2/3] 🤖 Invoking SLM to draft structured sections...")
     for attempt in range(MAX_ATTEMPTS):
         try:
             raw = generate(prompt if attempt == 0 else prompt + RETRY_NOTE)
             parsed = _ModelSummary.model_validate(json.loads(_strip_fences(raw)))
+            total_draft_claims = sum(len(c) for c in parsed.sections.values())
+            _safe_print(f"      ✓ Attempt {attempt + 1}: Received structured JSON with {total_draft_claims} draft claim(s) across sections")
             break
-        except (json.JSONDecodeError, ValidationError):
+        except (json.JSONDecodeError, ValidationError) as exc:
+            _safe_print(f"      ⚠️ Attempt {attempt + 1} validation failed: {exc}. Retrying...")
             continue
     else:
+        _safe_print(f"  ❌ SLM failed to produce valid summary after {MAX_ATTEMPTS} attempts.")
+        _safe_print(f"{'='*70}\n")
         return SummaryResult("failed", uncertainties=["A summary could not be produced reliably. Please try again."])
 
+    _safe_print(f"  [Step 3/3] 🛡️ Validating claims deterministically per section:")
     sections, rejected, cited = [], [], set()
-    for key, _ in SECTIONS:
+    for key, desc in SECTIONS:
         result = validate(ModelAnswer(claims=parsed.sections.get(key, [])), passages)
         rejected += result.rejected
         cited |= {c for claim in result.accepted for c in claim.citations}
-        sections.append(Section(key, result.accepted, "stated" if result.accepted else "not_stated"))
+        status = "stated" if result.accepted else "not_stated"
+        status_icon = "✓" if status == "stated" else "—"
+        _safe_print(f"      {status_icon} Section '{key}' ({desc[:28]}...): {len(result.accepted)} accepted, {len(result.rejected)} rejected")
+        sections.append(Section(key, result.accepted, status))
 
     uncertainties = list(parsed.uncertainties)
     if rejected:
         uncertainties.append("Some statements were removed because the verified source text did not support them.")
     sources = [p for p in passages if p.passage_id in cited]
+    stated_count = sum(1 for s in sections if s.status == "stated")
+    _safe_print(f"✅ [SUMMARISE COMPLETE] {stated_count}/{len(SECTIONS)} sections populated, {len(rejected)} rejected claims")
+    _safe_print(f"{'='*70}\n")
     return SummaryResult("summarised", sections, sources, uncertainties, rejected)

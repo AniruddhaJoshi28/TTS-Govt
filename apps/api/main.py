@@ -17,12 +17,31 @@ import json
 import logging
 import os
 import re as _re
+import sys
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
+def _log_print(*args, **kwargs):
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        safe_args = [
+            a.encode("ascii", errors="replace").decode("ascii") if isinstance(a, str) else a
+            for a in args
+        ]
+        print(*safe_args, **kwargs)
 
 from fastapi import Depends, FastAPI, File, Form, Header, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -359,8 +378,10 @@ def create_summary(request: Request, body: SummaryRequest, refresh: bool = False
     key = hashlib.sha256(f"{doc.sha256}|{body.language.value}|{llm.model}|{len(doc.passages)}".encode()).hexdigest()[:24]
     cache = CACHE_DIR / "summaries" / f"{key}.json"
     if cache.exists() and not refresh:
+        _log_print(f"📦 [CACHE HIT] Returning cached summary for doc='{doc.entry.id}' ({body.language.value})")
         return JSONResponse({**json.loads(cache.read_text(encoding="utf-8")), "request_id": request.state.request_id})
 
+    _log_print(f"\n🚀 [API REQUEST: /summaries] Generating fresh summary for doc='{doc.entry.id}'...")
     passages = doc.to_passages()
     try:
         result = summarise(passages, body.language, llm)
@@ -403,12 +424,14 @@ def question_answer(request: Request, body: QaRequest, refresh: bool = False):
         doc = _doc(body.document_id)
         index = rt.indexes.get(doc.entry.id)
         scope = doc.sha256
+        target_name = f"doc '{doc.entry.id}'"
     else:
         if body.state is None:
             raise ApiError(400, "state_required", "Please choose a state or a document so the right orders are searched.")
         docs = [d for d in rt.corpus.values() if d.entry.state == body.state]
         index = BM25Index([p for d in docs for p in d.to_passages()])
         scope = ",".join(sorted(d.sha256 for d in docs))
+        target_name = f"state '{body.state.value}' ({len(docs)} docs)"
     llm = _require_llm()
 
     # The same question about the same document version gets the same answer (also what makes
@@ -418,8 +441,10 @@ def question_answer(request: Request, body: QaRequest, refresh: bool = False):
     key = hashlib.sha256(f"{scope}|{passages_n}|{body.language.value}|{llm.model}|{question}".encode()).hexdigest()[:24]
     cache = CACHE_DIR / "answers" / f"{key}.json"
     if cache.exists() and not refresh:
+        _log_print(f"📦 [CACHE HIT] Returning cached Q&A answer for {target_name} query='{question}'")
         return JSONResponse({**json.loads(cache.read_text(encoding="utf-8")), "request_id": request.state.request_id})
 
+    _log_print(f"\n🚀 [API REQUEST: /qa] Query: \"{question}\" | Target: {target_name} | Language: {body.language.value}")
     try:
         result = answer(question, body.language, index, llm)
     except LLMUnavailable as exc:
@@ -463,16 +488,20 @@ def _run_synthesis(job_id: str, req: SynthesisRequest) -> None:
     from services.tts.service import AudioQualityError, synthesize
     job = rt.jobs[job_id]
     job["status"] = "running"
+    _log_print(f"🔊 [TTS SYNTHESIS] Generating audio in {req.language.value} ({len(req.text):,} chars)...")
     try:
         result = synthesize(req.text, req.language.value, rt.tts, req.speaker)
     except AudioQualityError as exc:
+        _log_print(f"❌ [TTS ERROR] Quality error: {exc}")
         job.update(status="failed", error=str(exc))
         return
     except Exception as exc:  # engine crash: report, never substitute other audio
+        _log_print(f"❌ [TTS ERROR] Engine error: {exc}")
         job.update(status="failed", error=f"synthesis error: {type(exc).__name__}")
         return
     job.update(status="done", model=result.model, voice=result.voice, duration_s=round(result.duration_s, 2),
                wav=result.wav)
+    _log_print(f"🔊 [TTS COMPLETED] {result.duration_s:.2f}s audio synthesized using voice '{result.voice}' ({result.model})")
     if len(rt.speech_cache) > 500:
         rt.speech_cache.clear()
     rt.speech_cache[_speech_key(req)] = dict(job)
@@ -625,10 +654,19 @@ async def upload_document(
     content_sha = hashlib.sha256(content).hexdigest()
     safe_name = _re.sub(r"[^a-zA-Z0-9_-]", "-", Path(filename).stem.lower())[:50]
     doc_id = f"upload-{safe_name}-{content_sha[:10]}"
+    doc_title = title or Path(filename).stem.replace("_", " ").replace("-", " ").title()
+
+    _log_print(f"\n{'='*75}")
+    _log_print(f"📥 [DOCUMENT UPLOAD INGESTION PIPELINE STARTED]")
+    _log_print(f"   • File: '{filename}' ({len(content):,} bytes / {len(content)/(1024*1024):.2f} MB)")
+    _log_print(f"   • Title: '{doc_title}'")
+    _log_print(f"   • Document ID: {doc_id}")
 
     # Fast-path check if already ingested
     if doc_id in rt.corpus:
         existing = rt.corpus[doc_id]
+        _log_print(f"ℹ️ [UPLOAD FAST-PATH] Document '{doc_id}' already ingested. Ready for immediate querying.")
+        _log_print(f"{'='*75}\n")
         return Envelope[UploadResult](
             request_id=request.state.request_id,
             language=existing.entry.language,
@@ -645,24 +683,37 @@ async def upload_document(
         )
 
     # -- convert to PDF --------------------------------------------------
+    _log_print(f"  [Step 1/6] 🔄 Sniffing format & normalizing to PDF...")
     try:
         original_type = detect_type(filename, content)
         pdf_bytes = to_pdf(filename, content)
+        _log_print(f"      ✓ Detected format: {original_type.upper()}")
+        _log_print(f"      ✓ Normalized to PDF: {len(pdf_bytes):,} bytes")
     except UnsupportedFormat as exc:
+        _log_print(f"  ❌ Unsupported format: {exc}")
+        _log_print(f"{'='*75}\n")
         raise ApiError(
             415, "unsupported_format",
             f"{exc}  Accepted formats: {ALLOWED_LABEL}.",
         ) from exc
     except ConversionError as exc:
+        _log_print(f"  ❌ Conversion error: {exc}")
+        _log_print(f"{'='*75}\n")
         raise ApiError(422, "conversion_failed", str(exc)) from exc
 
     # -- extract text and detect language --------------------------------
+    _log_print(f"  [Step 2/6] 📄 Extracting pages & inspecting embedded text...")
     from services.pdf_ocr.extract import InvalidPdf, extract_pages
     try:
         pages = extract_pages(pdf_bytes)
+        embedded_pages = sum(1 for p in pages if p.method == "embedded")
+        _log_print(f"      ✓ Total pages: {len(pages)} (Embedded text: {embedded_pages}, Scanned/OCR fallback: {len(pages) - embedded_pages})")
     except InvalidPdf as exc:
+        _log_print(f"  ❌ Invalid document: {exc}")
+        _log_print(f"{'='*75}\n")
         raise ApiError(422, "invalid_document", str(exc)) from exc
 
+    _log_print(f"  [Step 3/6] 🌐 Detecting language & script...")
     all_text = "\n".join(p.text for p in pages if p.text)
     detected_lang = language.value if language else detect_language(all_text)
     # Validate the detected language is one we support.
@@ -671,13 +722,12 @@ async def upload_document(
     except ValueError:
         lang_enum = Language.ENGLISH
         detected_lang = "en"
+    _log_print(f"      ✓ Auto-detected language: '{detected_lang}' (Language Enum: {lang_enum.name})")
 
     # -- build corpus entry ----------------------------------------------
     sha = hashlib.sha256(pdf_bytes).hexdigest()
     now = datetime.now(timezone.utc)
     doc_state = state or State.UPLOADED
-
-    doc_title = title or Path(filename).stem.replace("_", " ").replace("-", " ").title()
 
     entry = DocumentEntry(
         id=doc_id,
@@ -703,20 +753,29 @@ async def upload_document(
     except Exception:
         pass  # OCR not available — embedded text only.
 
+    _log_print(f"  [Step 4/6] ✂️ Chunking into citable passages with zero-hallucination span tracking...")
     corpus_doc = build_document(entry, pdf_bytes, sha, now, ocr)
+    _log_print(f"      ✓ Created {len(corpus_doc.passages)} citable passage(s)")
 
     # Save to disk.
+    _log_print(f"  [Step 5/6] 💾 Persisting document artifacts & rendering page preview thumbnails...")
     save(corpus_doc, rt.corpus_dir)
 
     # Render page images for the source panel.
     try:
         render_page_images(pdf_bytes, rt.corpus_dir / doc_id)
+        _log_print(f"      ✓ Rendered {len(corpus_doc.pages)} page preview thumbnail(s)")
     except Exception as exc:
         logger.warning("Could not render page images for %s: %s", doc_id, exc)
 
     # Hot-add to runtime (no restart needed).
+    _log_print(f"  [Step 6/6] ⚡ Live indexing passages into in-memory BM25 index...")
     rt.corpus[doc_id] = corpus_doc
     rt.indexes[doc_id] = BM25Index(corpus_doc.to_passages())
+    _log_print(f"      ✓ Document '{doc_id}' is LIVE in corpus ({len(rt.corpus)} total documents active)")
+    _log_print(f"      ✓ Ready for: Q&A queries, 9-point structured summaries, TTS audio synthesis")
+    _log_print(f"✅ [INGESTION PIPELINE COMPLETE] Document ID: {doc_id}")
+    _log_print(f"{'='*75}\n")
 
     logger.info(
         "Uploaded %s: %s → %d pages, %d passages, language=%s",

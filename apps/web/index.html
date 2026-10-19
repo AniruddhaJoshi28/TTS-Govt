@@ -15,22 +15,27 @@
         <div class="brand-tag" data-i18n="tagline"></div>
       </div>
     </div>
-    <label class="lang">
-      <span data-i18n="language"></span>
-      <select id="language" data-testid="language">
-        <option value="mr">मराठी</option>
-        <option value="hi">हिंदी</option>
-        <option value="or">ଓଡ଼ିଆ</option>
-        <option value="en">English</option>
-      </select>
-    </label>
+    <div class="topbar-actions">
+      <button type="button" id="btn-top-upload" class="btn upload-quick-btn" data-testid="btn-top-upload">
+        <span aria-hidden="true">📤</span> <span data-i18n="uploadQuickBtn">नवीन GR अपलोड करा</span>
+      </button>
+      <label class="lang">
+        <span data-i18n="language"></span>
+        <select id="language" data-testid="language">
+          <option value="mr">मराठी</option>
+          <option value="hi">हिंदी</option>
+          <option value="or">ଓଡ଼ିଆ</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+    </div>
   </header>
 
   <nav class="states" role="tablist" aria-label="State">
     <button role="tab" data-state="MH" data-testid="state-MH">महाराष्ट्र</button>
     <button role="tab" data-state="MP" data-testid="state-MP">मध्य प्रदेश</button>
     <button role="tab" data-state="OD" data-testid="state-OD">ଓଡ଼ିଶା</button>
-    <button role="tab" data-state="UP" data-testid="state-UP" class="upload-tab">📤 <span data-i18n="uploadTab">Upload</span></button>
+    <button role="tab" data-state="UP" data-testid="state-UP" class="upload-tab">📤 <span data-i18n="uploadTab">दस्तऐवज अपलोड</span></button>
   </nav>
 
   <main class="layout">

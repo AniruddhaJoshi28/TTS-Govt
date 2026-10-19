@@ -564,9 +564,10 @@ async function uploadFile(file) {
 
   const formData = new FormData();
   formData.append("file", file);
-  if (ui.state && ui.state !== "UP") {
-    formData.append("state", ui.state);
-  }
+  // A scanned PDF has no text for pre-OCR language detection. Send the user's
+  // selected language and keep all manual uploads in one predictable library.
+  formData.append("state", "UP");
+  formData.append("language", ui.lang);
 
   try {
     fill.style.width = "65%";
@@ -599,8 +600,7 @@ async function uploadFile(file) {
       </div>`;
 
     // Refresh state and select the newly uploaded document
-    const targetState = ui.state === "UP" ? "UP" : (resData.state || "UP");
-    await loadState(targetState);
+    await loadState("UP", ui.lang);
     if (resData.document_id) {
       await selectDocument(resData.document_id);
     }

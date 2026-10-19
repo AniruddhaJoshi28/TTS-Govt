@@ -233,12 +233,15 @@ def _llm_status() -> DependencyStatus:
 
 @app.get(f"{API_PREFIX}/health", response_model=Envelope[Health])
 def health(request: Request) -> Envelope[Health]:
-    from services.pdf_ocr.ocr import OcrUnavailable, find_tesseract
+    from services.pdf_ocr.ocr import OcrUnavailable, available_languages, find_tesseract
     try:
-        find_tesseract()
-        ocr = DependencyStatus(name="ocr", status="ok")
-    except OcrUnavailable:
-        ocr = DependencyStatus(name="ocr", status="not_configured")
+        cmd = find_tesseract()
+        missing = sorted({"mar", "hin", "ori", "eng"} - available_languages(cmd))
+        ocr = (DependencyStatus(name="ocr", status="ok", detail=cmd) if not missing else
+               DependencyStatus(name="ocr", status="unavailable",
+                                detail="missing language data: " + ", ".join(missing)))
+    except OcrUnavailable as exc:
+        ocr = DependencyStatus(name="ocr", status="not_configured", detail=str(exc))
     deps = [
         DependencyStatus(name="corpus", status="ok" if rt.corpus else "not_configured",
                          detail=f"{len(rt.corpus)} documents"),
@@ -662,8 +665,9 @@ async def upload_document(
     _log_print(f"   • Title: '{doc_title}'")
     _log_print(f"   • Document ID: {doc_id}")
 
-    # Fast-path check if already ingested
-    if doc_id in rt.corpus:
+    # Retry legacy/failed zero-passage artifacts after OCR is installed instead
+    # of falsely treating them as successfully ingested documents.
+    if doc_id in rt.corpus and rt.corpus[doc_id].passages:
         existing = rt.corpus[doc_id]
         _log_print(f"ℹ️ [UPLOAD FAST-PATH] Document '{doc_id}' already ingested. Ready for immediate querying.")
         _log_print(f"{'='*75}\n")
@@ -745,17 +749,36 @@ async def upload_document(
         portal_metadata={},
     )
 
-    # Build OCR if available.
+    # Scanned pages require OCR. Do not save a zero-passage artifact and claim
+    # that it is ready for questions.
+    scanned_pages = len(pages) - embedded_pages
     ocr = None
     try:
-        from services.pdf_ocr.ocr import TesseractOcr
-        ocr = TesseractOcr()
-    except Exception:
-        pass  # OCR not available — embedded text only.
+        from services.pdf_ocr.ocr import OCR_LANGS, OcrUnavailable, TesseractOcr, require_languages
+        if scanned_pages:
+            cmd = require_languages(OCR_LANGS[lang_enum.value])
+            ocr = TesseractOcr(cmd=cmd)
+    except OcrUnavailable as exc:
+        _log_print(f"  OCR unavailable for {scanned_pages} scanned page(s): {exc}")
+        _log_print(f"{'='*75}\n")
+        raise ApiError(
+            503, "ocr_unavailable",
+            f"This document has {scanned_pages} scanned page(s), but OCR is not ready: {exc}",
+            retryable=True,
+        ) from exc
 
     _log_print(f"  [Step 4/6] ✂️ Chunking into citable passages with zero-hallucination span tracking...")
-    corpus_doc = build_document(entry, pdf_bytes, sha, now, ocr)
+    try:
+        corpus_doc = build_document(entry, pdf_bytes, sha, now, ocr)
+    except OcrUnavailable as exc:
+        raise ApiError(503, "ocr_failed", f"OCR could not read this document: {exc}", retryable=True) from exc
     _log_print(f"      ✓ Created {len(corpus_doc.passages)} citable passage(s)")
+
+    if not corpus_doc.passages:
+        raise ApiError(
+            422, "document_has_no_text",
+            "No readable text was found. Try a clearer scan or select its language before uploading.",
+        )
 
     # Save to disk.
     _log_print(f"  [Step 5/6] 💾 Persisting document artifacts & rendering page preview thumbnails...")

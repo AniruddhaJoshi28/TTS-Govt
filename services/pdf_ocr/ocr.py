@@ -42,6 +42,29 @@ def find_tesseract() -> str:
     raise OcrUnavailable("tesseract not found; install it or set TESSERACT_CMD")
 
 
+def available_languages(cmd: str | None = None) -> set[str]:
+    """Return installed Tesseract languages, failing clearly on a broken install."""
+    command = cmd or find_tesseract()
+    proc = subprocess.run([command, "--list-langs"], capture_output=True, timeout=30, check=False)
+    if proc.returncode != 0:
+        detail = proc.stderr.decode("utf-8", "replace").strip()
+        raise OcrUnavailable(detail or "tesseract --list-langs failed")
+    lines = proc.stdout.decode("utf-8", "replace").splitlines()
+    return {line.strip() for line in lines if line.strip() and not line.lower().startswith("list of available")}
+
+
+def require_languages(langs: str, cmd: str | None = None) -> str:
+    """Validate all languages in an expression such as ``mar+eng``."""
+    command = cmd or find_tesseract()
+    missing = sorted(set(langs.split("+")) - available_languages(command))
+    if missing:
+        raise OcrUnavailable(
+            "missing Tesseract language data: " + ", ".join(missing)
+            + "; install tessdata_best files or set TESSDATA_PREFIX"
+        )
+    return command
+
+
 @dataclass(frozen=True)
 class OcrWord:
     text: str

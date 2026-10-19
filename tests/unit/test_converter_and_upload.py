@@ -154,7 +154,18 @@ def test_upload_txt_document_success():
     assert len(detail["passages"]) >= 1
 
 
-def test_upload_image_document_success():
+def test_upload_image_document_success(monkeypatch):
+    from services.pdf_ocr import ocr as ocr_module
+
+    class WorkingOcr:
+        def __init__(self, cmd=None):
+            pass
+
+        def page(self, pdf_bytes, page, langs):
+            return ocr_module.OcrPage(page, "Government Resolution scanned text", [])
+
+    monkeypatch.setattr(ocr_module, "require_languages", lambda langs: "tesseract")
+    monkeypatch.setattr(ocr_module, "TesseractOcr", WorkingOcr)
     img = Image.new("RGB", (100, 100), color="blue")
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
@@ -164,6 +175,23 @@ def test_upload_image_document_success():
     data = res.json()["data"]
     assert data["original_format"] == "image"
     assert data["pages"] == 1
+    assert data["passages"] >= 1
+
+
+def test_scanned_upload_fails_clearly_when_ocr_is_unavailable(monkeypatch):
+    from services.pdf_ocr import ocr as ocr_module
+
+    def unavailable(_langs):
+        raise ocr_module.OcrUnavailable("missing Tesseract language data: eng")
+
+    monkeypatch.setattr(ocr_module, "require_languages", unavailable)
+    img = Image.new("RGB", (100, 100), color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    files = {"file": ("scan.png", io.BytesIO(buf.getvalue()), "image/png")}
+    res = client.post("/api/v1/upload", files=files, data={"language": "en"})
+    assert res.status_code == 503
+    assert res.json()["error"]["code"] == "ocr_unavailable"
 
 
 def test_upload_duplicate_document_returns_existing():

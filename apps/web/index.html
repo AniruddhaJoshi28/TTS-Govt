@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>शासन निर्णय सहाय्यक</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261019-upload">
 </head>
 <body>
   <header class="topbar">
@@ -35,15 +35,21 @@
     <button role="tab" data-state="MH" data-testid="state-MH">महाराष्ट्र</button>
     <button role="tab" data-state="MP" data-testid="state-MP">मध्य प्रदेश</button>
     <button role="tab" data-state="OD" data-testid="state-OD">ଓଡ଼ିଶା</button>
-    <button role="tab" data-state="UP" data-testid="state-UP" class="upload-tab">📤 <span data-i18n="uploadTab">दस्तऐवज अपलोड</span></button>
+    <button role="tab" data-state="UP" data-testid="state-UP" class="upload-tab">📚 <span data-i18n="uploadsTab">अपलोड केलेले दस्तऐवज</span></button>
   </nav>
 
   <main class="layout">
     <section class="col-main">
-      <!-- Upload zone (visible when Upload tab is active) -->
-      <section id="upload-section" class="card upload-card" style="display: none;" data-testid="upload-section">
-        <h2 data-i18n="uploadTitle">Upload a Document</h2>
-        <p class="upload-hint" data-i18n="uploadHint">Drop any PDF, DOCX, TXT, RTF, ODT, or image file here — or click to browse.</p>
+      <!-- Upload remains visible while an operator reviews an existing document. -->
+      <section id="upload-section" class="card upload-card" data-testid="upload-section" aria-labelledby="upload-title">
+        <div class="upload-heading">
+          <div>
+            <p class="upload-kicker" data-i18n="uploadKicker">ADD A GOVERNMENT RESOLUTION</p>
+            <h2 id="upload-title" data-i18n="uploadTitle">Upload a GR / Document</h2>
+            <p class="upload-hint" data-i18n="uploadHint">Upload a GR to make it available for summaries, questions and voice playback.</p>
+          </div>
+          <span class="upload-ready" data-i18n="uploadReady">Secure local processing</span>
+        </div>
         <div id="drop-zone" class="drop-zone" data-testid="drop-zone">
           <div class="drop-icon">📄</div>
           <p class="drop-text" data-i18n="dropText">Drag & drop your file here</p>
@@ -65,7 +71,7 @@
             <span class="format-badge">PNG</span>
             <span class="format-badge">TIFF</span>
           </div>
-          <p class="size-hint">Max 50 MB</p>
+          <p class="size-hint" data-i18n="uploadLimit">Maximum file size: 50 MB</p>
         </div>
         <div id="upload-progress" class="upload-progress" style="display: none;" data-testid="upload-progress">
           <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
@@ -108,6 +114,6 @@
   </main>
 
   <footer class="footer" data-i18n="disclaimer"></footer>
-  <script src="app.js"></script>
+  <script src="app.js?v=20261019-upload"></script>
 </body>
 </html>

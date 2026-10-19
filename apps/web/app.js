@@ -34,7 +34,8 @@ const I18N = {
     placeholder: "आपला प्रश्न इथे लिहा", noDocs: "या राज्यासाठी दस्तऐवज अजून उपलब्ध नाहीत.",
     micDenied: "मायक्रोफोन वापरण्याची परवानगी मिळाली नाही.",
     docType: { circular: "परिपत्रक", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड केलेला दस्तऐवज" },
-    uploadTab: "दस्तऐवज अपलोड", uploadTitle: "दस्तऐवज अपलोड करा",
+    uploadsTab: "अपलोड केलेले दस्तऐवज", uploadTitle: "GR / दस्तऐवज अपलोड करा",
+    uploadKicker: "नवीन शासन निर्णय जोडा", uploadReady: "सुरक्षित स्थानिक प्रक्रिया", uploadLimit: "कमाल फाइल आकार: 50 MB",
     uploadQuickBtn: "नवीन GR अपलोड करा",
     uploadHint: "कोणतीही PDF, DOCX, TXT, RTF, ODT किंवा इमेज फाइल येथे टाका — किंवा निवडा.",
     dropText: "फाइल येथे ड्रॅग आणि ड्रॉप करा", dropOr: "— किंवा —", browseFiles: "फाइल निवडा",
@@ -74,7 +75,8 @@ const I18N = {
     placeholder: "अपना सवाल यहाँ लिखें", noDocs: "इस राज्य के दस्तावेज़ अभी उपलब्ध नहीं हैं।",
     micDenied: "माइक्रोफ़ोन की अनुमति नहीं मिली।",
     docType: { circular: "परिपत्र", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड किया गया दस्तावेज़" },
-    uploadTab: "दस्तावेज़ अपलोड", uploadTitle: "दस्तावेज़ अपलोड करें",
+    uploadsTab: "अपलोड किए गए दस्तावेज़", uploadTitle: "GR / दस्तावेज़ अपलोड करें",
+    uploadKicker: "नया सरकारी आदेश जोड़ें", uploadReady: "सुरक्षित स्थानीय प्रोसेसिंग", uploadLimit: "अधिकतम फ़ाइल आकार: 50 MB",
     uploadQuickBtn: "नया आदेश अपलोड करें",
     uploadHint: "कोई भी PDF, DOCX, TXT, RTF, ODT या इमेज फ़ाइल यहाँ डालें — या चुनें।",
     dropText: "फ़ाइल यहाँ ड्रैग और ड्रॉप करें", dropOr: "— या —", browseFiles: "फ़ाइल चुनें",
@@ -114,7 +116,8 @@ const I18N = {
     placeholder: "ଆପଣଙ୍କ ପ୍ରଶ୍ନ ଏଠାରେ ଲେଖନ୍ତୁ", noDocs: "ଏହି ରାଜ୍ୟ ପାଇଁ ଦଲିଲ ଏପର୍ଯ୍ୟନ୍ତ ଉପଲବ୍ଧ ନାହିଁ।",
     micDenied: "ମାଇକ୍ରୋଫୋନ ଅନୁମତି ମିଳିଲା ନାହିଁ।",
     docType: { circular: "ପରିପତ୍ର", notification: "ବିଜ୍ଞପ୍ତି", gr: "ସରକାରୀ ନିଷ୍ପତ୍ତି", uploaded: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ" },
-    uploadTab: "ଦଲିଲ ଅପଲୋଡ", uploadTitle: "ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
+    uploadsTab: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ", uploadTitle: "GR / ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
+    uploadKicker: "ନୂଆ ସରକାରୀ ନିଷ୍ପତ୍ତି ଯୋଡ଼ନ୍ତୁ", uploadReady: "ସୁରକ୍ଷିତ ସ୍ଥାନୀୟ ପ୍ରକ୍ରିୟା", uploadLimit: "ସର୍ବାଧିକ ଫାଇଲ୍ ଆକାର: 50 MB",
     uploadQuickBtn: "ନୂତନ ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
     uploadHint: "ଯେକୌଣସି PDF, DOCX, TXT, RTF, ODT ବା ଇମେଜ୍ ଫାଇଲ୍ ଏଠାରେ ପକାନ୍ତୁ — ବା ବାଛନ୍ତୁ।",
     dropText: "ଫାଇଲ୍ ଏଠାରେ ଡ୍ରାଗ୍ ଓ ଡ୍ରପ୍ କରନ୍ତୁ", dropOr: "— କିମ୍ବା —", browseFiles: "ଫାଇଲ୍ ବାଛନ୍ତୁ",
@@ -154,7 +157,8 @@ const I18N = {
     placeholder: "Type your question here", noDocs: "No documents are available for this state yet.",
     micDenied: "Microphone permission was not granted.",
     docType: { circular: "Circular", notification: "Notification", gr: "Government Resolution", uploaded: "Uploaded Document" },
-    uploadTab: "Upload", uploadTitle: "Upload a Document",
+    uploadsTab: "Uploaded Documents", uploadTitle: "Upload a GR / Document",
+    uploadKicker: "ADD A GOVERNMENT RESOLUTION", uploadReady: "Secure local processing", uploadLimit: "Maximum file size: 50 MB",
     uploadQuickBtn: "Upload GR",
     uploadHint: "Drop any PDF, DOCX, TXT, RTF, ODT, or image file here — or click to browse.",
     dropText: "Drag & drop your file here", dropOr: "— or —", browseFiles: "Browse Files",
@@ -275,10 +279,10 @@ async function loadState(state, lang) {
   $("#answer").innerHTML = "";
   $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
 
+  // Upload is a primary action, not a hidden state. Keep it visible while an
+  // operator reviews an existing document or browses uploaded documents.
   const uploadSec = $("#upload-section");
-  if (uploadSec) {
-    uploadSec.style.display = (state === "UP") ? "block" : "none";
-  }
+  if (uploadSec) uploadSec.hidden = false;
   const switcher = $("#doc-switcher");
   if (switcher) switcher.style.display = "none";
 
@@ -619,6 +623,18 @@ async function uploadFile(file) {
 const dropZone = $("#drop-zone");
 const fileInput = $("#file-input");
 if (dropZone && fileInput) {
+  dropZone.tabIndex = 0;
+  dropZone.setAttribute("role", "button");
+  dropZone.setAttribute("aria-labelledby", "upload-title");
+  dropZone.addEventListener("click", e => {
+    if (!e.target.closest("label")) fileInput.click();
+  });
+  dropZone.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
   ["dragenter", "dragover"].forEach(evt => {
     dropZone.addEventListener(evt, e => {
       e.preventDefault();
@@ -663,10 +679,8 @@ $("#btn-summary").addEventListener("click", createSummary);
 const btnTopUpload = $("#btn-top-upload");
 if (btnTopUpload) {
   btnTopUpload.addEventListener("click", () => {
-    loadState("UP");
-    setTimeout(() => {
-      $("#upload-section")?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    $("#upload-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    fileInput?.click();
   });
 }
 

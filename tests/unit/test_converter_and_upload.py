@@ -108,6 +108,17 @@ def test_detect_language_marathi_vs_hindi():
 
 # -- API upload endpoint integration tests ------------------------------------
 
+def test_upload_control_is_visible_on_initial_page():
+    """Uploading is a primary action, not a panel hidden behind a state tab."""
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.text
+    assert 'id="btn-top-upload"' in html
+    assert 'id="upload-section"' in html
+    assert 'id="file-input"' in html
+    assert 'id="upload-section" class="card upload-card" style="display: none;"' not in html
+
+
 def test_upload_formats_endpoint():
     res = client.get("/api/v1/upload/formats")
     assert res.status_code == 200

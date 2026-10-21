@@ -29,6 +29,13 @@ wait_for() {  # url, seconds, name, logfile
 
 [[ -x "$VENV_APP/bin/python" && -x "$VENV_VLLM/bin/vllm" ]] || { echo "Run scripts/gpu/setup.sh first." >&2; exit 1; }
 
+port_free() { "$VENV_APP/bin/python" -c 'import socket,sys; s=socket.socket(); s.bind(("127.0.0.1", int(sys.argv[1])))' "$1" 2>/dev/null; }
+next_free_port() { local p; for p in $(seq "$1" $(($1 + 100))); do port_free "$p" && { echo "$p"; return; }; done; return 1; }
+# A previous run may have moved the model server off a busy port; look there first.
+if [[ -f "$LOGS/vllm.port" ]]; then
+  export LLM_PORT="$(cat "$LOGS/vllm.port")" LLM_BASE_URL="http://127.0.0.1:$(cat "$LOGS/vllm.port")/v1"
+fi
+
 served_model() {  # the model id the running vLLM serves, or nothing
   curl -fsS "$LLM_BASE_URL/models" 2>/dev/null \
     | "$VENV_APP/bin/python" -c 'import json, sys; print(json.load(sys.stdin)["data"][0]["id"])' 2>/dev/null
@@ -54,6 +61,15 @@ else
     exit 1
   fi
 
+  # On a shared server another user's service may already hold the model port. Move to the next
+  # free port and point the app at it (this script starts the app with the same environment).
+  if ! port_free "$LLM_PORT"; then
+    p="$(next_free_port $((LLM_PORT + 1)))" || { echo "no free port near $LLM_PORT" >&2; exit 1; }
+    echo "port $LLM_PORT is used by another process; using $p for the model server"
+    export LLM_PORT="$p" LLM_BASE_URL="http://127.0.0.1:$p/v1"
+  fi
+  echo "$LLM_PORT" >"$LOGS/vllm.port"
+
   step "Starting the model server: $LLM_MODEL (GPU $LLM_GPUS)"
   nohup "${VLLM_ENV[@]}" CUDA_VISIBLE_DEVICES="$LLM_GPUS" "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
     --dtype bfloat16 --max-model-len "$MAX_MODEL_LEN" --gpu-memory-utilization "$GPU_MEM" \
@@ -72,10 +88,12 @@ if [[ -f "$LOGS/app.pid" ]] && kill -0 "$(cat "$LOGS/app.pid")" 2>/dev/null; the
   kill "$(cat "$LOGS/app.pid")"
   for _ in $(seq 1 30); do kill -0 "$(cat "$LOGS/app.pid")" 2>/dev/null || break; sleep 1; done
 fi
-if curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/v1/health" 2>/dev/null; then
-  echo "Port $PORT is still in use by another process (not started by this script). Stop it or set PORT in .env." >&2
-  exit 1
+if ! port_free "$PORT"; then
+  p="$(next_free_port $((PORT + 1)))" || { echo "no free port near $PORT" >&2; exit 1; }
+  echo "port $PORT is used by another process; the app will use $p"
+  export PORT="$p"
 fi
+echo "$PORT" >"$LOGS/app.port"
 CUDA_VISIBLE_DEVICES="$APP_GPUS" nohup "$VENV_APP/bin/python" -m uvicorn apps.api.main:app \
   --host 127.0.0.1 --port "$PORT" >"$LOGS/app.log" 2>&1 &
 echo $! >"$LOGS/app.pid"

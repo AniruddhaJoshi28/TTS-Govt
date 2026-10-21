@@ -8,3 +8,4 @@ for name in app vllm; do
   fi
   rm -f "$pidfile"
 done
+rm -f "$LOGS/vllm.port" "$LOGS/app.port"

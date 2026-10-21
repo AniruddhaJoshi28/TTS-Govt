@@ -14,6 +14,8 @@ ROOT="$(pwd)"
 
 PAGES="${PAGES:-2}"
 DOWNLOADS="${DOWNLOADS:-30}"
+# run_all.sh records the port it actually used (it moves off ports taken by other users).
+[[ -f logs/app.port ]] && PORT="$(cat logs/app.port)"
 APP_URL="${APP_URL:-http://127.0.0.1:${PORT:-8000}}"
 first_python() { for p in "$@"; do [[ -x "$p" ]] && { echo "$p"; return; }; done; command -v python; }
 APP_PY="${APP_PY:-$(first_python "$ROOT/.venvs/app/bin/python" "$ROOT/.venv/bin/python")}"

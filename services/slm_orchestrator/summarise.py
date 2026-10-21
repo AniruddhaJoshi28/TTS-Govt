@@ -6,6 +6,7 @@ reported as "not stated in the document" rather than filled in.
 """
 
 import json
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -79,6 +80,28 @@ class SummaryResult:
     rejected: list[Rejected] = field(default_factory=list)
 
 
+# Prompt budget for passage text. The model context is 16k tokens and the answer may use 4k;
+# Devanagari/Odia can cost ~1 token per character, so ~9k characters of evidence is the safe
+# ceiling. Long GRs (crawled documents run to 60+ pages) would otherwise overflow and be rejected.
+SUMMARY_MAX_CHARS = int(os.environ.get("SUMMARY_MAX_CHARS", "9000"))
+
+
+def select_for_summary(passages: list[Passage], max_chars: int = SUMMARY_MAX_CHARS) -> tuple[list[Passage], int]:
+    """Portal metadata first, then pages in reading order, until the budget is used.
+
+    A GR states its subject, preamble and decision on the opening pages; long annexures
+    (seniority lists, tables) follow. Returns the selection and how many passages were left out.
+    """
+    ordered = sorted(passages, key=lambda p: (p.page != 0, p.page))
+    chosen, used = [], 0
+    for p in ordered:
+        if chosen and used + len(p.text) > max_chars:
+            break
+        chosen.append(p)
+        used += len(p.text)
+    return chosen, len(passages) - len(chosen)
+
+
 def build_prompt(language: Language, passages: list[Passage]) -> str:
     sections = "\n".join(f"- {key}: {desc}" for key, desc in SECTIONS)
     blocks = "\n".join(
@@ -94,6 +117,10 @@ def summarise(passages: list[Passage], language: Language, generate: Callable[[s
     _safe_print(f"   • Target Language: {language.name} ({LANGUAGE_NAMES.get(language, 'Unknown')})")
     _safe_print(f"   • Source Passages: {len(passages)}")
 
+    passages, omitted = select_for_summary(passages)
+    if omitted:
+        last_page = max((p.page for p in passages), default=0)
+        _safe_print(f"   • Long document: using {len(passages)} passages (up to page {last_page}); {omitted} later passages omitted")
     prompt = build_prompt(language, passages)
     _safe_print(f"  [Step 1/3] 📝 Assembled prompt ({len(prompt):,} chars) covering {len(SECTIONS)} citizen sections")
 
@@ -125,6 +152,9 @@ def summarise(passages: list[Passage], language: Language, generate: Callable[[s
         sections.append(Section(key, result.accepted, status))
 
     uncertainties = list(parsed.uncertainties)
+    if omitted:
+        uncertainties.append(f"This is a long document; the summary covers its first {max((p.page for p in passages), default=0)} "
+                             "page(s). Ask a question to search the rest of it.")
     if rejected:
         uncertainties.append("Some statements were removed because the verified source text did not support them.")
     sources = [p for p in passages if p.passage_id in cited]

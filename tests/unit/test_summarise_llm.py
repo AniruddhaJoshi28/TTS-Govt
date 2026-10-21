@@ -98,3 +98,26 @@ def test_llm_config_from_env(monkeypatch):
     monkeypatch.setenv("LLM_MODEL", "sarvamai/sarvam-m")
     c = LLMConfig.from_env()
     assert c.base_url == "http://gpu:8000/v1" and c.model == "sarvamai/sarvam-m"
+
+
+def test_long_documents_are_trimmed_to_the_prompt_budget():
+    # Crawled GRs run to 60+ pages; without a budget the prompt overflowed the model context
+    # and vLLM rejected the request (seen as 503 model_unavailable in the UI).
+    from services.retrieval.bm25 import Passage
+    from services.slm_orchestrator.summarise import select_for_summary
+
+    meta = Passage("d:meta", "d", "v", "u", 0, "Document number: 1")
+    pages = [Passage(f"d:p{n}:1", "d", "v", "u", n, "अ" * 1000) for n in range(66, 0, -1)]
+    chosen, omitted = select_for_summary([*pages, meta], max_chars=5000)
+    assert chosen[0].passage_id == "d:meta"
+    assert [p.page for p in chosen[1:]] == [1, 2, 3, 4]  # reading order from the start
+    assert omitted == 67 - len(chosen) and sum(len(p.text) for p in chosen) <= 5000
+
+
+def test_short_documents_are_not_trimmed():
+    from services.retrieval.bm25 import Passage
+    from services.slm_orchestrator.summarise import select_for_summary
+
+    ps = [Passage(f"d:p{n}:1", "d", "v", "u", n, "text " * 50) for n in (1, 2, 3)]
+    chosen, omitted = select_for_summary(ps)
+    assert omitted == 0 and len(chosen) == 3

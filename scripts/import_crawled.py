@@ -20,6 +20,7 @@ import os
 import re
 import sqlite3
 import sys
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -101,7 +102,16 @@ def warm_summaries(app_url: str, docs: list[tuple[str, str]]) -> None:
             with urllib.request.urlopen(req, timeout=600) as resp:
                 status = json.loads(resp.read()).get("data", {}).get("status")
             print(f"  summary {doc_id} ({lang}): {status}")
-        except Exception as exc:  # model down etc.: the UI will generate it on demand instead
+        except urllib.error.HTTPError as exc:
+            try:
+                err = json.loads(exc.read()).get("error") or {}
+            except ValueError:
+                err = {}
+            print(f"  summary {doc_id} ({lang}) not pre-generated: HTTP {exc.code} "
+                  f"{err.get('code', '')}: {err.get('message', '')}", file=sys.stderr)
+            if err.get("code") in ("model_not_configured", "model_unavailable"):
+                return  # model server down: the UI generates summaries on demand instead
+        except Exception as exc:
             print(f"  summary {doc_id} ({lang}) not pre-generated: {exc}", file=sys.stderr)
             return
 

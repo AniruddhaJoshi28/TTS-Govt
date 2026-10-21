@@ -112,7 +112,8 @@ optional = {
     "stt": "voice input (STT) is not loaded; the UI will ask users to type. "
            "Videos can still be recorded without --question-audio.",
     "qdrant": "vector search (Qdrant) is off; Q&A uses keyword search only. "
-              "Install: .venvs/app/bin/pip install 'qdrant-client>=1.14,<1.16' 'fastembed-gpu>=0.8,<0.9'",
+              "Install: uv pip install --python .venvs/app/bin/python 'qdrant-client>=1.14,<1.16' "
+              "'fastembed-gpu>=0.8,<0.9', then re-run this script.",
 }
 for name in [b for b in bad if b in optional]:
     print(f"\nWarning: {optional[name]} See logs/app.log.")

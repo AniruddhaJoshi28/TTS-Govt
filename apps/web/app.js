@@ -244,6 +244,7 @@ function fmtDate(iso) {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return String(iso);
+  if (d.getFullYear() < 1901) return "—";  // date not stated on the portal
   if (ui.lang === "or") return `${odiaDigits(d.getDate())} ${ODIA_MONTHS[d.getMonth()]} ${odiaDigits(d.getFullYear())}`;
   const locale = { mr: "mr-IN", hi: "hi-IN", en: "en-IN" }[ui.lang] || "en-IN";
   return d.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });

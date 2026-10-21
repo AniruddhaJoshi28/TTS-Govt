@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 import urllib.request
@@ -34,6 +35,20 @@ from services.pdf_ocr.ocr import OCR_LANGS, OcrUnavailable, TesseractOcr, requir
 PLATFORM = ROOT / "government-gr-platform"
 STATE_MAP = {"maharashtra": State.MAHARASHTRA, "madhya_pradesh": State.MADHYA_PRADESH, "odisha": State.ODISHA}
 DEFAULT_LANG = {"maharashtra": "mr", "madhya_pradesh": "hi", "odisha": "or"}
+
+
+UPLOAD_MONTH = re.compile(r"/(?:files|uploads)/(\d{4})-(\d{2})/")
+
+
+def upload_month(url: str) -> date | None:
+    """Month the portal published the file (Drupal stores uploads under files/YYYY-MM/)."""
+    m = UPLOAD_MONTH.search(url or "")
+    if not m:
+        return None
+    try:
+        return date(int(m.group(1)), int(m.group(2)), 1)
+    except ValueError:
+        return None
 
 
 def corpus_id(row: sqlite3.Row) -> str:
@@ -56,7 +71,15 @@ def entry_for(row: sqlite3.Row) -> DocumentEntry:
         "Document number": row["document_number"], "Department": row["department"],
         "Date": row["publication_date"], "Type": row["document_type"], "Source": row["source_id"],
     }.items() if v}
-    issued = date.fromisoformat(row["publication_date"]) if row["publication_date"] else date.today()
+    if row["publication_date"]:
+        issued = date.fromisoformat(row["publication_date"])
+    else:
+        # The portal states no date. Never use today's date (it would list old GRs as new);
+        # use the upload month from the official file path and say so in the metadata.
+        uploaded = upload_month(row["original_url"])
+        issued = uploaded or date(1900, 1, 1)
+        meta["Date"] = (f"Not stated on the portal; file uploaded {uploaded:%B %Y}" if uploaded
+                        else "Not stated on the portal")
     return DocumentEntry(
         id=corpus_id(row), state=STATE_MAP[row["state"]], language=Language(lang),
         document_type=row["document_type"], issued=issued,

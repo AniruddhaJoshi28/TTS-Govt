@@ -116,3 +116,16 @@ def test_orgpedia_seed_uses_official_url_only():
     assert doc.source_key == "mh_gr_portal"
     assert doc.document_url.startswith("https://gr.maharashtra.gov.in/Site/Upload/Government%20Resolutions/Marathi/")
     assert doc.raw["provenance"]["seed"] == "orgpedia"
+
+
+def test_odisha_columns_mapped_by_header_when_field_names_are_misleading():
+    # agri.odisha.gov.in notifications keep the date in "field-date-of-birth" and the number
+    # in "field-number-of-tweet"; the header labels ("Date", "Notification No.") are authoritative.
+    src = get_source("od_agri_notifications")
+    adapter = build_adapter(src)
+    lp = _listing(fixture_html("od_agri_notifications.html"), src.base_url)
+    rows = adapter.extract_listing_metadata(lp)
+    assert rows[0]["date"] == "10/05/2021"  # most date cells on this portal are genuinely empty
+    assert sum(1 for r in rows if r.get("letter_number")) >= len(rows) // 2  # "Notification No." column
+    doc = adapter.normalize_metadata(rows[0], adapter.resolve_document_url(rows[0], lp), lp)
+    assert doc.publication_date is not None

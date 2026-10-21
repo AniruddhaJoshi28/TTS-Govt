@@ -34,6 +34,27 @@ FIELD_MAP = {
 }
 
 
+HEADER_MAP = [
+    (re.compile(r"\b(title|subject|name)\b", re.I), "title"),
+    (re.compile(r"\b(date|dated)\b", re.I), "date"),
+    (re.compile(r"\b(letter|notification|order|resolution|memo|circular)\s*(no|number)\b", re.I), "letter_number"),
+    (re.compile(r"\bdepartment\b", re.I), "department"),
+    (re.compile(r"\bcategory\b", re.I), "category"),
+]
+
+
+def header_columns(table) -> dict[int, str]:
+    """Column index -> field, from the table's header labels."""
+    out: dict[int, str] = {}
+    for idx, th in enumerate(table.find_all("th")):
+        label = clean_text(th.get_text(" "))
+        for pattern, field in HEADER_MAP:
+            if pattern.search(label) and field not in out.values():
+                out[idx] = field
+                break
+    return out
+
+
 def page_url(base_url: str, page: int) -> str:
     p = urlsplit(base_url)
     query = re.sub(r"(^|&)page=\d+", "", p.query).strip("&")
@@ -69,14 +90,18 @@ class OdishaDrupalViewsAdapter(SourceAdapter):
         table = soup.select_one("table.views-table")
         if table is None:
             return []
+        by_header = header_columns(table)
         rows = []
         for tr in table.select("tbody tr") or table.find_all("tr")[1:]:
             row: dict[str, Any] = {}
-            for td in tr.find_all("td"):
-                classes = td.get("class") or []
-                for cls in classes:
-                    if cls in FIELD_MAP:
-                        row[FIELD_MAP[cls]] = clean_text(td.get_text(" "))
+            for idx, td in enumerate(tr.find_all("td")):
+                # Header text first: some departments reuse unrelated Drupal field names
+                # (agri notifications keep the date in "field-date-of-birth").
+                field = by_header.get(idx)
+                if field is None:
+                    field = next((FIELD_MAP[c] for c in td.get("class") or [] if c in FIELD_MAP), None)
+                if field and not row.get(field):
+                    row[field] = clean_text(td.get_text(" "))
             pdf_links = [a["href"] for a in tr.find_all("a", href=True) if ".pdf" in a["href"].lower()]
             links = pdf_links or [a["href"] for a in tr.find_all("a", href=True)]
             if not links or not row.get("title"):

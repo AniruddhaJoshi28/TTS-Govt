@@ -1,0 +1,57 @@
+[project]
+name = "government-gr-platform"
+version = "0.1.0"
+description = "Self-hosted crawler, archive and search platform for official government resolutions (Maharashtra, Madhya Pradesh, Odisha)"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1,<0.29",
+    "scrapy>=2.19,<3",
+    "scrapy-playwright>=0.0.48,<0.1",
+    "lxml>=6.1,<7",
+    "beautifulsoup4>=4.15,<5",
+    "pydantic>=2.14,<3",
+    "pydantic-settings>=2.16,<3",
+    "sqlalchemy>=2.1.5,<2.2",
+    "alembic>=1.20,<2",
+    "psycopg[binary]>=3.3,<4",
+    "minio>=7.2.20,<8",
+    "redis>=8.1,<9",
+    "rq>=2.12,<3",
+    "apscheduler>=3.11,<4",
+    "pymupdf>=2.0,<3",
+    "pypdf>=6.21,<7",
+    "fastapi>=0.156,<0.157",
+    "uvicorn>=0.54,<1",
+    "prometheus-client>=0.26,<1",
+    "pyyaml>=6.0.3,<7",
+]
+
+[project.optional-dependencies]
+ocr = ["ocrmypdf>=16.10"]
+dev = [
+    "pytest>=9.1,<10",
+    "pytest-asyncio>=1.4,<2",
+    "pytest-cov>=7.1,<8",
+    "respx>=0.23,<0.24",
+    "fakeredis>=2.40,<3",
+    "reportlab>=5.0,<6",
+]
+
+[project.scripts]
+grctl = "apps.crawler.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "live: hits real government websites; opt-in via GR_LIVE_TESTS=1",
+]
+addopts = "-m 'not live'"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["apps*", "core*", "crawlers*", "services*"]

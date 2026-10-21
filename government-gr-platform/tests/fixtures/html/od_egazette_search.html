@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html   class="no-js">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Search Gazette  | eGazette | Government of Odisha</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        
+<link rel="shortcut icon" href="https://egazette.odisha.gov.in/assets/frontend/images/favicon.png" type="image/x-icon">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/bootstrap.min.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link href="https://fonts.googleapis.com/css?family=Muli|Open+Sans:400,600" rel="stylesheet">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/animate.min.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/owl.carousel.min.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link rel="stylesheet" href="https://egazette.odisha.gov.in/assets/frontend/css/magnific-popup.css" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/jquery.mCustomScrollbar.css" rel="stylesheet" type="text/css" nonce="8f0882ce3be14f201cadd0eff5726cbd"/>
+<!--<link href="https://egazette.odisha.gov.in/css/example.css" rel="stylesheet">-->
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/style-debasis.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/style-jyoti.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/style-amiya.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link href="https://egazette.odisha.gov.in/assets/frontend/css/media-query.css" rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+  <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<![endif]-->
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<link rel="stylesheet" href="https://egazette.odisha.gov.in/assets/js/vendor/jquery-ui/jquery-ui.min.css" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+<link rel="stylesheet" href="https://egazette.odisha.gov.in/assets/js/vendor/jquery-ui/jquery.dataTables.min.css" nonce="8f0882ce3be14f201cadd0eff5726cbd">        <style rel="stylesheet" nonce="8f0882ce3be14f201cadd0eff5726cbd">
+            .week_hide {
+                display: none;
+            }
+        </style>
+    </head>
+    <body class="home-body">
+        <style nonce="8f0882ce3be14f201cadd0eff5726cbd" rel="stylesheet">
+    .redirect_modal {
+        z-index: 999999999;
+    }
+    .cm_message {
+        font-family: 'Muli', sans-serif;line-height: 20px;
+    }
+    .right-align-div {
+        float: right;
+        /* color: darkblue; */
+        background: #e06c05;
+    }
+    .main_nav ul li .submenu{
+        background:#ffffff;
+    }
+    .main_nav ul li .submenu li a:hover{
+        color:#ffffff;
+    }
+    .submenu a:hover{
+         color:#ffffff;
+    }
+    /* .dropdown{
+        position: relative;
+        display: inline-block;
+    }
+    .dropdown:hover .dropdown-menu {
+        display: block;
+    } */
+    .dropdown-menu{
+        display: none;
+        position: absolute;
+        background-color: #ffffff;
+        margin:5px !important;
+    }
+    .dropdown-menu li{
+        color: #870204;
+        /* padding: 10px; */
+        text-decoration: none;
+        display: block;
+    }
+    .dropdown ul li a {
+        /* border-bottom: 1px solid #ddd; */
+        padding: 4px 10px !important;
+        font-size: 13px;
+    }
+    .dropdown-menu li:hover {
+    background-color: #ececec;
+    color: #262626;
+    }
+    bottom:focus, bottom:focus-visible{
+        outline:none !important;
+        box-shadow:none !important;
+    }
+    .dropdown-menu li a:hover {
+        color: #262626 !important;
+    }
+    .dropdown-menu a{
+        color: #870204 !important;
+    }
+    .dropdown-menu a:hover{
+        color: #ffffff !important;
+    }
+    .btn-default:hover{
+        background-color: #e06c05 !important;
+        
+    }
+    .open>.dropdown-toggle.btn-default{
+        background-color: #e06c05 !important;
+        color:#ffffff!important;
+    }
+    /* .top-menu li a{
+        margin:5px;
+    } */
+    .custom-menu{
+        width: 160px !important;
+        padding: 10px;
+        border-radius: 0;
+        margin: 0 !important;
+    }
+    .custom-menu li{
+       padding: 0;
+    }
+    .custom-menu li a{
+       padding: 7px !important;
+    }
+</style>
+<!-- Popup modal for external link -->
+<div id="external" class="modal fade redirect_modal" role="dialog">
+    <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Alert</h4>
+            </div>
+            <div class="modal-body">
+                <p>You are being redirected to the external website. Are you sure?</p>
+                <a  href="#" target="_blank" class="btn btn-primary" >Yes, Proceed</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="cm_message" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Hon'ble CM's Message</h4>
+      </div>
+      <!-- <div class="modal-body">
+            <p class="cm_message">
+                I am happy that today Govt. Printing Press under Commerce and Transport Dept. is introducing e-Gazette system which would change the conventional method of publication of Odisha Gazette to eco-friendly, paperless and through electronic mode, making the process more convenient and transparent to both citizens as well as indenting Departments. 
+            </p><br/>
+
+            <p class="cm_message">
+                I am happy that such efforts are being taken by the State Government to ensure citizens get Govt. services without having to visit a Govt. office. This is the essence of our 5T mission. The citizen is the owner of the Govt. and he or she must remain at the focal point of all our programmes.
+            </p><br/>
+
+            <p class="cm_message">
+                I congratulate Commerce & Transport Dept. and specifically the Govt. Printing Press on this occasion. Let us continue our concerted efforts for building a citizen centric Government.
+            </p>
+            <span><img src="https://egazette.odisha.gov.in//assets/frontend/images/cm_sign.jpg"></span>
+      </div> -->
+    </div>
+  </div>
+</div>
+
+<!-- Popup modal for external link -->
+<header class="stricky">
+    <!-- <marquee height="50"><h1 style="font-weight: bold;font-size: 25px;color: red;margin-top: 14px;letter-spacing: 2px;">e-Gazette services will not be available from 12pm to 9pm on Saturday, 7th Feb due to Server Maintenance. Inconvenience is deeply regretted.</h1></marquee> -->
+    <div class="header-setting">
+        <a id="toggle_lang" style="cursor: pointer;margin-top:0px;">Switch to Odia</a>   
+        <a href="#skip-to-main" class="skiper" data-en="Skip To Main Content" data-or="ମୁଖ୍ୟ ବିଷୟବସ୍ତୁକୁ ଅତିକ୍ରମ କରନ୍ତୁ">Skip To Main Content</a>
+
+        <a href="javascript:void(0);" class="tooltip-button">
+            <i class="glyphicon glyphicon-cog icon-spin"></i>
+        </a>
+        <div class="logiin-button">
+            <div class="loginn"><a class="odia notranslate" href="https://egazette.odisha.gov.in/user/login" target="_blank">Login</a></div>
+        </div>
+    </div>
+    <div class="top-header">
+        <div class="topbar">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12 res-none">
+                        <ul class="top-menu left">
+                            <li id="date"></li>
+                            <li id="clock"></li>
+                        </ul>
+                    </div>
+                    <div class="col-lg-8 col-md-8 col-sm-12 col-xs-12 setting-responsive margin-bottom-media">
+                        <div class="top-right">
+                            <ul class="top-menu">
+                                <li><a id="toggle_lang1"  style="cursor: pointer;margin-top:0px;">Switch to Odia</a></li>
+                                <li><a href="#skip-to-main" class="skiper" data-en="Skip To Main Content" data-or="ମୁଖ୍ୟ ବିଷୟବସ୍ତୁକୁ ଅତିକ୍ରମ କରନ୍ତୁ">Skip To Main Content</a></li>
+                                <li><a href="https://egazette.odisha.gov.in/screen_reader" class="skiper2" data-en="Screen Reader Access" data-or="ସ୍କ୍ରିନ୍ ପାଠକ ପ୍ରବେଶ">Screen Reader Access</a></li>
+                                <li>
+                                    <div class="topbar-font skiper3">
+                                        <div class="f-btn"> 
+                                            <a href="javascript:void(0)" id="btn-decrease">A-</a> 
+                                            <a href="javascript:void(0)" id="btn-orig">&nbsp;A</a> 
+                                            <a href="javascript:void(0)" id="btn-increase"> &nbsp; A+</a>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="a-btn skiper4">
+                                        <a href="javascript:void(0)" id="c-active">T</a>
+                                        <a href="javascript:void(0)" id="c-inactive">T</a>
+                                    </div>
+                                </li>
+                                <!--                                <li class="drop translation-links">
+                                                                    <span><a class="odia notranslate" href="javascript:void(0)" data-lang="odia">ଓଡ଼ିଆ</a></span>
+                                                                </li>-->
+                                <li class="home-login">
+                                    <!-- <div class="loginn"><a class="odia notranslate" href="https://egazette.odisha.gov.in/user/login" target="_blank">Login</a></div> -->
+                                    <!-- <div class="loginn"><a class="odia notranslate" href="javascript:void(0);" target="_blank">Login</a></div>
+                                        <ul class="submenu">
+                                        <li><a href="https://egazette.odisha.gov.in/name_surname">Name/Surname</a></li>
+                                        <li><a href="https://egazette.odisha.gov.in/partnership">Partnership</a></li>
+                                        </ul>
+                                    </li> -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-en="Login" data-or="ଲଗଇନ୍">
+                                        <!-- <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1">  -->
+                                            Login
+                                            <span class="caret"></span>
+                                            <!-- <span class="toggle-arrow"></span> -->
+                                        </button>
+                                        <ul class="dropdown-menu custom-menu" aria-labelledby="dropdownMenu1">
+                                            <li><a href="https://egazette.odisha.gov.in/user/login" data-en="Nodal Officer" data-or="ନୋଡାଲ୍ ଅଧିକାରୀ">Nodal Officer</a></li>
+                                            <li><a href="https://egazette.odisha.gov.in/commerce_transport_department/login_ct" data-en="C&T Dept" data-or="ସି&ଟି ବିଭାଗ">C&T Dept.</a></li>
+                                            <li><a href="https://egazette.odisha.gov.in/igr_user/login" data-en="IGR" data-or="IGR">IGR</a></li>
+                                        </ul>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="logo-menu">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8 col-md-8 col-sm-12 col-xs-12">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <div class="logo">
+                                    <a href="https://egazette.odisha.gov.in/"><img src="https://egazette.odisha.gov.in/assets/frontend/images/logo.png" class="img-responsive"></a>
+                                </div>
+                            </div>
+                        </div>
+                        
+
+                        
+                    </div>
+                    <div class="col-lg-4 col-md-4 col-sm-6 col-xs-6">
+                        <div class="current-cm">
+                            <span 
+                                id="hoverable_text"
+                                class="hover-audio"
+                                data-en="Shri Mohan Charan Majhi Hon'ble Chief Minister" 
+                                data-or="ଶ୍ରୀ ମୋହନ ଚରଣ ମାଝି ମାନ୍ୟବର ମୁଖ୍ୟମନ୍ତ୍ରୀ">
+                                Shri Mohan Charan Majhi<br>
+                                <i>Hon'ble Chief Minister</i>
+                            </span>
+
+                            <div class="cm-pic-small pic1"></div>
+                        </div>
+                    </div>
+                    <!--<div class="col-lg-2 col-md-2 col-sm-12 col-xs-12">
+                        <div class="map-e fadeInScale">
+                        </div>
+                    </div>-->
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+<div class="menu-overlay"></div>
+<nav class="main_nav h-over">
+    <div class="container">
+        <div class="responsive-menu">
+            <span class="menu-text">Menu</span>
+            <span class="hambergur-menu">
+                <i></i>
+                <i></i>
+                <i></i>
+            </span>
+        </div>
+        <ul class="main-ul">
+            <span class="menu_close_btn"></span>
+            <li><a class="link-3" href="https://egazette.odisha.gov.in/" id="hoverable_text" data-en="Home" data-or="ହୋମ୍">Home</a></li>
+            <li id="menu-iteam-1 "><a href="https://egazette.odisha.gov.in/about_us/" id="hoverable_text" data-en="About Us" data-or="ଆମ ବିଷୟରେ">About Us</a> <span class="toggle-arrow"></span>
+            </li>                    
+            <li><a href="https://egazette.odisha.gov.in/about_gazette/" id="hoverable_text" data-en="About Gazette" data-or="ଗେଜେଟ୍ ବିଷୟରେ">About Gazette</a></li>
+            <!-- <li id="menu-iteam-1"><a href="https://egazette.odisha.gov.in/search_gazette/" id="hoverable_text" data-en="Search Gazette" data-or="ଗେଜେଟ୍ ଖୋଜନ୍ତୁ">Search Gazette</a> <span class="toggle-arrow"></span></li> -->
+            
+            <li><a href="javascript:void(0);" id="hoverable_text" data-en="Archival" data-or="ଆର୍କାଇଭାଲ୍">Archival</a><span class="toggle-arrow"></span>
+                <ul class="submenu">
+                   <li><a href="https://egazette.odisha.gov.in/extraordinary_archival" id="hoverable_text" data-en="Extraordinary" data-or="ଅବାଜ୍ଞାତ">Extraordinary</a></li>
+                   <li><a href="https://egazette.odisha.gov.in/weekly_archival" id="hoverable_text" data-en="Weekly" data-or="ସାପ୍ତାହିକ">Weekly</a></li>
+                </ul>
+            </li>
+            
+            <!--
+            <li id="menu-iteam-1"><a href="https://egazette.odisha.gov.in/archive">Archive</a> <span class="toggle-arrow"></span></li>-->
+            <li class="external"><a href="https://rtionline.gov.in/" target="_blank" id="hoverable_text" data-en="RTI" data-or="ଆରଟିଆଇ">RTI</a></li>
+            <!--<li><a href="https://egazette.odisha.gov.in/applicants_login">Applicant Login</a></li>-->
+            <!-- <li><a href="https://egazette.odisha.gov.in/contact_us/">Contact Us</a></li> -->
+            <li><a href="https://egazette.odisha.gov.in/manual/public/manual.pdf" target="_blank" id="hoverable_text" class="pdf-link" data-en="User Manual" data-or="ବ୍ୟବହାରକାରୀ ମୋଡେଲ">User Manual</a></li>
+            <li><a href="javascript:void(0);" id="hoverable_text" data-en="Online Services" data-or="ଅନ୍ଲାଇନ୍ ସେବାଗୁଡ଼ିକ">Online Services</a><span class="toggle-arrow"></span>
+                <ul class="submenu">
+                    <li><a href="https://egazette.odisha.gov.in/name_surname" id="hoverable_text" data-en="Name/Surname" data-or="ନାମ/ପରିଚୟ">Name/Surname</a></li>
+                    <li><a href="https://egazette.odisha.gov.in/partnership" id="hoverable_text" data-en="Partnership" data-or="ସହଯୋଗ">Partnership</a></li>
+                    <li><a href="https://egazette.odisha.gov.in/gender" id="hoverable_text" data-en="Gender" data-or="ଲିଙ୍ଗ ପରିବର୍ତ୍ତନ">Gender</a></li>
+                </ul>
+            </li>
+            <li>
+                <!-- Add routes in href -->
+                <!-- <a href="#">Grievance</a> -->
+            </li>
+        </ul>
+    </div>
+</nav>        <section class="inner-banner">
+            <div class="container">
+                <h1 id="hoverable_text" data-en="Search Gazette" data-or="ଗେଜେଟ୍ ସନ୍ଧାନ କରନ୍ତୁ">Search Gazette</h1>
+            </div>
+        </section>
+        <section class="breadcumb-wrapper" id="skip-to-main">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="breadcumb">
+                            <ul>
+                                <li><a href="https://egazette.odisha.gov.in/" rel="noopener noreferrer" id="hoverable_text" data-en="Home" data-or="ହୋମ୍">Home</a><span> &gt;</span></li>
+                                <li id="hoverable_text"  data-en="Search Gazette" data-or="ଗେଜେଟ୍ ସନ୍ଧାନ କରନ୍ତୁ">Search Gazette</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="main-container">
+            <div class="container">
+                <div class="row">
+                    <!--Right Sidebar-1 Start-->
+                    <div class="col-lg-9 col-md-9 col-sm-12 col-xs-12 e-margin fadeInBottom">
+                        <div class="infographic-section media-section">
+                            <!-- <h3 class="head-section pink">Search Gazette</h3> -->
+                            <div class="content-part">
+                                <div class="row">
+                                    <form action="https://egazette.odisha.gov.in/search_gazette_result" method="post" class="row" id="search_form" accept-charset="utf-8">
+<input type="hidden" name="csrf_gazette_odisha" value="ea50b7284643eb851b26907395968962" />                         
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                            <div class="search-gazette">
+                                                <div class="form-group">
+                                                    <label class="margin-bottom" id="hoverable_text" data-en="Gazette Type" data-or="ଗେଜେଟ୍ ପ୍ରକାର">Gazette Type</label>
+                                                    <select class="form-control" id="gType" name="gType" required="" autocomplete="off">
+                                                        <option value="" id="hoverable_text">Select</option>
+                                                                                                                    <!-- <option>All</option> -->
+                                                            <option value="1" id="hoverable_text">
+                                                                Extraordinary                                                            </option>
+                                                                                                                    <!-- <option>All</option> -->
+                                                            <option value="2" id="hoverable_text">
+                                                                Weekly                                                            </option>
+                                                                                                            </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                            <div class="search-gazette">
+                                                <div class="form-group">
+                                                    <label class="margin-bottom" id="hoverable_text" data-en="Year" data-or="ବର୍ଷ">Year</label>
+                                                    <select class="form-control" id="cYear" name="cYear" autocomplete="off">
+                                                        <option value="" id="hoverable_text">Select Year</option>
+                                                                                                                    <option value="2024" id="hoverable_text">
+                                                                2024                                                            </option>
+                                                                                                            </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                            <div class="row">
+                                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                                    <div class="search-gazette">
+                                                        <div class="form-group">
+                                                            <label class="margin-bottom" id="hoverable_text" data-en="Gazette No" data-or="ଗେଜେଟ୍ ସଂଖ୍ୟା">Gazette No</label>
+                                                            <input type="text" placeholder="Search by Gazette No" class="form-control" name="gazette_no" id="gazette_no" maxlength="40" autocomplete="off" maxlength="5">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg" id="keywordID">
+                                                    <div class="search-gazette">
+                                                        <div class="form-group">
+                                                            <label class="margin-bottom" id="hoverable_text" data-en="Published Date" data-or="ପ୍ରକାଶିତ ତାରିଖ">Published Date</label>
+                                                            <input class="date-width" autocomplete="off" placeholder="DD-MM-YYYY" type="text" name="published_date" id="published_date">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="week_hide" id="weeklyBlock">
+                                            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                                <div class="search-gazette">
+                                                    <div class="form-group">
+                                                        <label class="margin-bottom" id="hoverable_text" data-en="Month" data-or="ମାସ">Month</label>
+                                                        <select class="form-control" name="monthName" id="monthName" autocomplete="off">
+                                                            <option value="" id="hoverable_text" data-en="Select Month" data-or="ମାସ ବାଛନ୍ତୁ">Select Month</option>
+                                                            <option id="hoverable_text" value="01">January</option>
+                                                            <option id="hoverable_text" value="02">February</option>
+                                                            <option id="hoverable_text" value="03">March</option>
+                                                            <option id="hoverable_text" value="04">April</option>
+                                                            <option id="hoverable_text" value="05">May</option>
+                                                            <option id="hoverable_text" value="06">June</option>
+                                                            <option id="hoverable_text" value="07">July</option>
+                                                            <option id="hoverable_text" value="08">August</option>
+                                                            <option id="hoverable_text" value="09">September</option>
+                                                            <option id="hoverable_text" value="10">October</option>
+                                                            <option id="hoverable_text" value="11">November</option>
+                                                            <option id="hoverable_text" value="12">December</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                                <div class="search-gazette">
+                                                    <div class="form-group">
+                                                        <label class="margin-bottom" id="hoverable_text" data-en="Week" data-or="ସପ୍ତାହ">Week</label>
+                                                        <select class="form-control" name="weekTime" id="weekTime" autocomplete="off">
+                                                            <option value="" id="hoverable_text">Select Week</option>
+                                                            <option id="hoverable_text" value="1" >Week 1</option>
+                                                            <option id="hoverable_text" value="2"  >Week 2</option>
+                                                            <option id="hoverable_text" value="3"  >Week 3</option>
+                                                            <option id="hoverable_text" value="4"  >Week 4</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg" id="departmentID">
+                                            <div class="search-gazette">
+                                                <div class="form-group">
+                                                    <label class="margin-bottom" id="hoverable_text" data-en="Department" data-or="ବିଭାଗ">Department</label>
+                                                    <select class="form-control" id="deptID" name="deptID" autocomplete="off">
+                                                        <option value="" id="hoverable_text">Select Dept.</option>
+                                                                                                                    <option id="hoverable_text" value="79">
+                                                                Agriculture & Farmers Empowerment Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="5">
+                                                                Co-operation Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="84">
+                                                                Commerce & Transport (Commerce) Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="81">
+                                                                Commerce & Transport (Transport) Department                                                             </option>
+                                                                                                                    <option id="hoverable_text" value="55">
+                                                                Department of Women & Child Development                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="72">
+                                                                Electronics & IT Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="86">
+                                                                Energy Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="58">
+                                                                Excise Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="7">
+                                                                Finance Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="66">
+                                                                Fisheries & ARD Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="61">
+                                                                Food Supplies & Consumer Welfare Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="76">
+                                                                Forest & Environment Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="78">
+                                                                GA & PG Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="59">
+                                                                Handlooms, Textiles & Handicrafts Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="56">
+                                                                Health & Family Welfare Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="80">
+                                                                Higher Education Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="85">
+                                                                Home Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="97">
+                                                                Home Election Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="67">
+                                                                Housing & Urban Development Departmentt                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="57">
+                                                                Industries Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="54">
+                                                                Information & PR Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="2">
+                                                                Labour & ESI Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="63">
+                                                                Law Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="83">
+                                                                Miscellaneous                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="91">
+                                                                Mission Shakti                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="77">
+                                                                MSME Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="90">
+                                                                Odia Language, Literature & Culture Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="95">
+                                                                Odisha High Court                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="94">
+                                                                Odisha Legislative Assembly                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="53">
+                                                                Panchayati Raj & DW Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="74">
+                                                                Parliamentary Affairs Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="71">
+                                                                Planning & Convergence Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="73">
+                                                                Public Enterprises Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="51">
+                                                                Raj Bhawan                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="65">
+                                                                Revenue & Disaster Management Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="68">
+                                                                Rural Development Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="88">
+                                                                School & Mass Education Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="75">
+                                                                Science & Technology Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="60">
+                                                                Skill Development & Technical Education Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="96">
+                                                                Social Security & Empowerment of Persons with Disabilities                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="69">
+                                                                Sports & Youth Services Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="89">
+                                                                SSEP Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="62">
+                                                                ST & SC Development Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="87">
+                                                                State Election Commission                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="52">
+                                                                Steel & Mines Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="70">
+                                                                Tourism Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="64">
+                                                                Water Resources Department                                                            </option>
+                                                                                                                    <option id="hoverable_text" value="82">
+                                                                Works Department                                                            </option>
+                                                                                                            </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg" id="notificationID">
+                                            <div class="search-gazette">
+                                                <div class="form-group">
+                                                    <label class="margin-bottom" for="usr" id="hoverable_text" data-en="Notification No" data-or="ନୋଟିଫିକେସନ୍ ସଂଖ୍ୟା">Notification No</label>
+                                                    <input type="text" placeholder="Notification/Order/Resolution No" class="form-control" name="notNum" id="notNum" maxlength="40" autocomplete="off">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                            <div class="search-gazette">
+                                                <div class="form-group">
+                                                    <label class="margin-bottom mgg" id="hoverable_text"  data-en="From Date" data-or="ତାରିଖ ଠାରୁ">From Date</label>
+                                                    <input class="date-width"  autocomplete="off" placeholder="DD-MM-YYYY" type="text" name="sByFdate" id="sByFdate">
+
+                                                    <label id="sByFdate-error" class="error" for="sByFdate"></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg">
+                                            <div class="search-gazette">
+                                                <div class="form-group">
+                                                    <label class="margin-bottom mgg" id="hoverable_text" data-en="To Date" data-or="ଆଜି ପର୍ଯ୍ୟନ୍ତ">To Date</label>
+                                                    <input class="date-width" autocomplete="off" placeholder="DD-MM-YYYY" type="text" name="sByTdate" id="sByTdate">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                            <div class="row">
+                                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg" id="subjectID">
+                                                    <div class="search-gazette">
+                                                        <div class="form-group">
+                                                            <label class="margin-bottom" id="hoverable_text" data-en="Subject" data-or="ବିଷୟ">Subject</label>
+                                                            <input type="text" placeholder="Search by Subject" class="form-control" name="sName" id="sName" maxlength="40" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 marg" id="keywordID">
+                                                    <div class="search-gazette">
+                                                        <div class="form-group">
+                                                            <label class="margin-bottom" id="hoverable_text" data-en="Keywords" data-or="କୀ ୱାର୍ଡ୍ସ"
+                                                            >Keywords</label>
+                                                            <input type="text" placeholder="Search by Keywords" class="form-control" name="keywords" id="keywords" maxlength="40" autocomplete="off">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="submit-button">
+                                                    <input type="submit" class="hvr-shutter-out-horizontal middle-btm">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--Right Sidebar-1 End-->
+                    <!--Left Sidebar-1 Start-->
+                    <div class="col-lg-3 col-md-3 col-sm-12 col-xs-12 left-side-bar">
+                        <div class="row">
+                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12  media-section important-link-section reveal-left">
+                                <div class="infographic-section e-margin links">
+                                <h3 class="head-section green" id="hoverable_text" data-en="Important Links" data-or="ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ଲିଙ୍କ୍ |">Important Links</h3>
+                                    <ul id="announcements-vertical-news">
+                                        <li class="external"><a href="https://ogpress.nic.in/" target="_blank" id="hoverable_text" data-en="Directorate of Printing, Stationery & Publication" data-or="ମୁଦ୍ରଣ, ଷ୍ଟେସନାରୀ ଏବଂ ପ୍ରକାଶନ ନିର୍ଦ୍ଦେଶାଳୟ |">Directorate of Printing, Stationery & Publication</a></li>
+                                        <li class="external"><a href="http://ct.odisha.gov.in/" target="_blank" id="hoverable_text" data-en="Commerce & Transport Department" data-or="ବାଣିଜ୍ୟ ଏବଂ ପରିବହନ ବିଭାଗ">Commerce & Transport Department</a></li>
+                                        <li class="external"><a href="https://www.odisha.gov.in/" target="_blank" id="hoverable_text" data-en="State Portal of Odisha" data-or="ଓଡ଼ିଶାର ରାଜ୍ୟ ପୋର୍ଟାଲ୍ |">State Portal of Odisha</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--Left Sidebar-1 End-->
+                </div>
+            </div>
+        </section>
+        <div class="clearfix"></div>
+<!--   ---------------------------------------------
+FOOTER PART START
+--------------------------------------------------->
+<footer>
+    <section class="footer-section-first">
+        <div class="container">
+            <ul class="fadeInScale">
+                <li><a href="https://egazette.odisha.gov.in/" data-en="Home" data-or="ହୋମ୍">Home</a></li>
+                <li><a href="https://egazette.odisha.gov.in/contact_us/"  data-en="Contact Us" data-or="ଯୋଗାଯୋଗ କରନ୍ତୁ">Contact Us</a></li>
+                <li><a href="https://egazette.odisha.gov.in/privacy_policy" data-en="Privacy Policy" data-or="ଗୋପନୀୟତା ନୀତି">Privacy Policy</a></li>
+                <li><a href="https://egazette.odisha.gov.in/copyright_policy" data-en="Copyright Policy" data-or="କପିରାଇଟ୍ ନୀତି">Copyright Policy</a></li>
+                <li><a href="https://egazette.odisha.gov.in/terms_conditions" data-en="Terms & Conditions" data-or="ସର୍ତ୍ତାବଳୀ ଏବଂ ସଂଜାମ">Terms & Conditions</a></li>
+                <li><a href="https://egazette.odisha.gov.in/disclaimer" data-en="Disclaimer" data-or="ଅସ୍ୱୀକୃତି">Disclaimer</a></li>
+                <li><a href="https://egazette.odisha.gov.in/feedback_us" data-en="Feedback" data-or="ମତାମତ">Feedback</a></li>
+            </ul>
+            <div class="footer-logoss">
+                <ul class="footer-linkss">
+                    <li class="fadeInScale" data-wow-duration="1s" data-wow-offset="100"><a href="https://www.odisha.gov.in/" target="_blank"><img src="https://egazette.odisha.gov.in/assets/frontend/images/footer-logos/logo-10.jpg" title="Government of Odisha"></a></li>
+                    <li  class="fadeInScale" data-wow-duration="1s" data-wow-offset="100"><a href="https://www.india.gov.in/" target="_blank"><img src="https://egazette.odisha.gov.in/assets/frontend/images/footer-logos/logo-3.jpg" alt="india"></a></li>
+                    <!--<li  class="fadeInScale" data-wow-duration="1s" data-wow-offset="100"><a href="http://digitalindia.gov.in/" target="_blank"><img src="https://egazette.odisha.gov.in/assets/frontend/images/footer-logos/logo-4.jpg" alt="digitalindia"></a></li>
+                    <li class="fadeInScale" data-wow-duration="1s" data-wow-offset="100"><a href="https://www.mygov.in/" target="_blank"><img src="https://egazette.odisha.gov.in/assets/frontend/images/footer-logos/logo-5.jpg" alt="mygov"></a></li>
+                    <li  class="fadeInScale" data-wow-duration="1s" data-wow-offset="100"><a href="https://data.gov.in/" target="_blank"><img src="https://egazette.odisha.gov.in/assets/frontend/images/footer-logos/logo-7.jpg" alt="data"></a></li>-->
+                </ul>
+            </div>
+            <div class="sociall fadeInScale">
+                <ul>
+                    <li><a class="facebook" href="https://www.facebook.com/PublicationOdisha/" target="_blaank"></a></li>
+                    <li><a class="twitter" href="https://twitter.com/OdishaGovtPress" target="_blaank"></a></li>
+                </ul>
+            </div>
+
+        </div>
+        <div class="wm-copyright">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="footer-design-by fadeInScale">
+                            <p data-en="<p>This site is Designed and Developed by <a href='https://www.nic.in/' target='_blank'>National Informatics Center</a>, Bhubaneswar, Odisha.</p>" 
+                            data-or="<p>ଏହି ସାଇଟ୍ ଟି ଡିଜାଇନ ଏବଂ ଡିଭେଲପ୍ କରାଯାଇଛି <a href='https://www.nic.in/' target='_blank'>ନାସନାଲ୍ ଇନଫର୍ମାଟିକସ୍ ସେଣ୍ଟର୍</a>, ଭୁବନେଶ୍ୱର, ଓଡିଶା।</p>">This site is Designed and Developed by <a href="https://www.nic.in/" target="_blank">National Informatics Center</a>, Bhubaneswar, Odisha.</p>
+                            <p data-en="Contents are provided, uploaded and approved by Directorate of Printing, Stationery & Publication, Kataka, Odisha." 
+                            data-or="ସମଗ୍ରୀଗୁଡ଼ିକ ଯୋଗାଯୋଗ କରାଯାଇଛି, ଅପଲୋଡ଼ କରାଯାଇଛି ଏବଂ ଅନୁମୋଦିତ ହୋଇଛି ଡିରେକ୍ଟରେଟ ଅଫ ପ୍ରିଣ୍ଟିଂ, ଷ୍ଟେସନେରି ଏବଂ ପବ୍ଲିକେସନ, କଟକ, ଓଡିଶା।"
+                            >Contents are provided, uploaded and approved by Directorate of Printing, Stationery & Publication, Kataka, Odisha.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</footer>
+<div id="gotoTop" class="arrow_up"></div>
+<!-----------------------------------------------
+FOOTER PART END
+---------------------------------------------------> 
+        <script src="https://egazette.odisha.gov.in/assets/frontend/js/jquery.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/jquery.dataTables.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/bootstrap.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/wow.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/jquery.mCustomScrollbar.concat.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/pagenav.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/owl.carousel.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<!--<script src="https://egazette.odisha.gov.in/assets/frontend/js/table.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>-->
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/custom-script-2.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<!--<script src="https://egazette.odisha.gov.in/assets/frontend/js/scrollreveal.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>-->
+<script src="https://egazette.odisha.gov.in/assets/js/vendor/jquery-ui/jquery-ui.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/moment.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script src="https://egazette.odisha.gov.in/assets/frontend/js/bootstrap-datetimepicker.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+
+
+<script>
+    // const toggleLang1 = document.getElementById('toggle_lang1');
+    // // console.log(toggleLang);
+    // const elementsToTranslate1 = document.querySelectorAll('[data-en][data-or]');
+
+    // toggleLang1.addEventListener('click', () => {
+    //     // console.log('clicked!');
+    //     const isEnglish = toggleLang1.textContent.includes('Odia');
+        
+    //     elementsToTranslate1.forEach(element => {
+    //         element.innerHTML = isEnglish ? element.getAttribute('data-or') : element.getAttribute('data-en');
+    //     });
+
+    //     toggleLang1.textContent = isEnglish ? 'Switch to English' : 'Switch to Odia';
+    // });
+
+    const toggleButton = document.getElementById('toggle_lang1');
+    const elementsToTranslate = document.querySelectorAll('[data-en][data-or]');
+
+    toggleButton.addEventListener('click', () => {
+        const isEnglish = toggleButton.textContent.includes('Odia');
+        
+        elementsToTranslate.forEach(element => {
+            // Function to recursively update text content while keeping the structure
+            const updateTextNodes = (node, isEnglish) => {
+                node.childNodes.forEach(child => {
+                    // Check if it's a text node and not an element node
+                    if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() !== '') {
+                        child.textContent = isEnglish ? node.getAttribute('data-or') : node.getAttribute('data-en');
+                    } else if (child.nodeType === Node.ELEMENT_NODE) {
+                        // Recursively update child elements
+                        updateTextNodes(child, isEnglish);
+                    }
+                });
+            };
+
+            // Apply the update function to each element
+            updateTextNodes(element, isEnglish);
+        });
+
+        toggleButton.textContent = isEnglish ? 'Switch to English' : 'Switch to Odia';
+    });
+</script>
+<script type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2">
+    $('.datepicker').datepicker({
+        dateFormat:'yy-mm-dd'
+    });
+    $(document).ready(function(){
+        $('#c-active').click(function(){
+            $('body').removeClass('contrast-active');
+        });
+
+        $('#c-inactive').click(function(){
+            $('body').addClass('contrast-active');
+        });
+    });
+
+    function addHoverSpeechSynthesis(selector, lang) {
+        const elements = document.querySelectorAll(selector);
+
+        elements.forEach( element => {
+            element.addEventListener('mouseenter', () => {
+                const text = element.innerText.trim();
+
+                speakText(text, lang);
+            });
+
+            element.addEventListener('mouseleave', () => {
+                window.speechSynthesis.cancel();
+            });
+        });
+
+        function speakText(text, lang) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    addHoverSpeechSynthesis('#hoverable_text', 'en-IN');
+</script>
+
+    </body>
+</html>
+
+<script src="https://egazette.odisha.gov.in/assets/js/jquery.validate.min.js" type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2"></script>
+<script type="text/javascript" nonce="a6b9a780936c8e980939086f618dded2">
+
+    document.getElementById("gType").addEventListener('change', function () {
+        if (this.value == "2") {
+            document.getElementById("weeklyBlock").style.display = "block";
+            document.getElementById("departmentID").style.display = "none";
+            document.getElementById("notificationID").style.display = "none";
+            document.getElementById("subjectID").style.display = "none";
+        } else {
+            document.getElementById("weeklyBlock").style.display = "none";
+            document.getElementById("departmentID").style.display = "block";
+            document.getElementById("notificationID").style.display = "block";
+            document.getElementById("subjectID").style.display = "block";
+        }
+    });
+
+    $(document).ready(function(){
+
+        $("#sByFdate").datepicker({
+            dateFormat: 'dd-mm-yy',
+            autoclose: true,
+            todayHighlight: true,
+            maxDate: new Date(),
+            onSelect: function(selected) {
+                $("#sByTdate").datepicker("option","minDate", selected)
+            }
+        }); 
+
+        $("#sByTdate").datepicker({
+            dateFormat: 'dd-mm-yy',
+            autoclose: true,
+            todayHighlight: true,
+            maxDate: new Date(),
+            onSelect: function(selected) {
+                $("#sByFdate").datepicker("option","maxDate", selected)
+            }
+        });
+
+        $("#published_date").datepicker({
+            dateFormat: 'dd-mm-yy',
+            autoclose: true,
+            todayHighlight: true,
+            maxDate: new Date(),
+        });
+
+        $("#search_form").validate({
+            rules: {
+                    gType: {
+                        required: true,
+                    },
+                    cYear: {
+                        required: true,
+                    },
+                    sByFdate:{
+                        required: {
+                            depends: function(element){
+                                if ($('#sByTdate').val() == '') {
+                                    return false;
+                                } else {
+                                    return true;
+                                }
+                            }
+                        }
+                    },
+
+                    sByTdate:{
+                        required: {
+                            depends: function(element){
+                                if ($('#sByFdate').val() == '') {
+                                    return false;
+                                } else {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                },
+                messages: {
+                    gType: {
+                       required: 'Please select gazette type',
+                    },
+                    cYear: {
+                       required: 'Please select year',
+                    },
+                    sByFdate:{
+                        required: 'Please select form date',
+                    },
+                    sByTdate:{
+                        required: 'Please select to date'
+                    }
+                },
+                submitHandler: function(form) {
+                    form.submit();
+                }
+        });
+    });
+</script>

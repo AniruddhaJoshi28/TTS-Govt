@@ -1,0 +1,80 @@
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    GR_DATABASE_URL: postgresql+psycopg://gr:${POSTGRES_PASSWORD:-gr}@postgres:5432/gr
+    GR_STORAGE_BACKEND: minio
+    GR_MINIO_ENDPOINT: minio:9000
+    GR_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+    GR_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    GR_REDIS_URL: redis://redis:6379/0
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    minio: { condition: service_healthy }
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_USER: gr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gr}
+      POSTGRES_DB: gr
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U gr"], interval: 5s, retries: 20 }
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 20 }
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes: [miniodata:/data]
+    ports: ["127.0.0.1:9001:9001"]
+    healthcheck: { test: ["CMD", "mc", "ready", "local"], interval: 5s, retries: 20 }
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  api:
+    <<: *app
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "apps.downloader.worker"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  scheduler:
+    <<: *app
+    command: ["python", "-m", "apps.scheduler.main"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes: ["./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["127.0.0.1:9090:9090"]
+    profiles: [monitoring]
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    ports: ["127.0.0.1:3000:3000"]
+    profiles: [monitoring]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

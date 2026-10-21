@@ -1,0 +1,206 @@
+# Source inventory. Every entry here was inspected during reconnaissance (see docs/source-audit.md).
+# `status` is the audited implementation status; adapters are only scheduled when `active: true`.
+#
+# Fields:
+#   key            unique source key (also the adapter config key)
+#   adapter        adapter class registered in crawlers/base/registry.py
+#   allowed_hosts  hosts the crawler may contact for this source (listing + PDFs + redirects)
+
+sources:
+  - key: mh_gr_portal
+    state: maharashtra
+    department: null            # multi-department portal; department comes from each row
+    name: Maharashtra Government Resolutions portal
+    base_url: https://gr.maharashtra.gov.in/1145/Government-Resolutions
+    adapter: maharashtra_gr_portal
+    source_type: government_resolution
+    crawl_strategy: aspnet_postback_pagination
+    access_policy: "robots.txt allows /; date-range search needs CAPTCHA (not automated); default listing pagination is public"
+    allowed_hosts: [gr.maharashtra.gov.in]
+    status: VERIFIED_WORKING
+    active: true
+    schedule_cron: "15 */3 * * *"
+    options:
+      max_pages: 30
+
+  - key: mh_orgpedia_backfill
+    state: maharashtra
+    department: null
+    name: Maharashtra GR historical seed list (Orgpedia, MIT licence) -> official PDFs
+    base_url: https://github.com/orgpedia/mahGRs
+    adapter: maharashtra_orgpedia_seed
+    source_type: government_resolution
+    crawl_strategy: seed_list_official_download
+    access_policy: "Orgpedia metadata is MIT licensed; PDFs are downloaded only from gr.maharashtra.gov.in"
+    allowed_hosts: [raw.githubusercontent.com, gr.maharashtra.gov.in]
+    status: VERIFIED_WORKING
+    active: false                # backfill-only; run explicitly
+    options:
+      # Orgpedia per-department repositories that publish import/documents/documents.json
+      repos: [mahagri]
+      documents_path: import/documents/documents.json
+      branch: main
+
+  - key: od_stsc_resolutions
+    state: odisha
+    department: ST & SC Development, Minorities & Backward Classes Welfare Department
+    name: Odisha ST&SC Dept - Resolutions/Notifications/Circulars/Office Orders
+    base_url: https://stsc.odisha.gov.in/en/resolutions-circulars-all-data
+    adapter: odisha_drupal_views
+    source_type: mixed
+    crawl_strategy: drupal_views_table_pagination
+    access_policy: "robots.txt returns 403 (no published policy); public listing; conservative rate"
+    allowed_hosts: [stsc.odisha.gov.in]
+    status: VERIFIED_WORKING
+    active: true
+    schedule_cron: "40 6 * * *"
+    options:
+      default_document_type: resolution
+      max_pages: 60
+
+  - key: od_agri_resolutions
+    state: odisha
+    department: Department of Agriculture & Farmers' Empowerment
+    name: Odisha Agriculture Dept - Resolutions
+    base_url: https://agri.odisha.gov.in/en/notification/resolution
+    adapter: odisha_drupal_views
+    source_type: resolution
+    crawl_strategy: drupal_views_table_pagination
+    access_policy: "robots.txt returns 403 (no published policy); public listing; conservative rate"
+    allowed_hosts: [agri.odisha.gov.in]
+    status: VERIFIED_WORKING
+    active: true
+    schedule_cron: "50 6 * * *"
+    options:
+      default_document_type: resolution
+      max_pages: 30
+
+  - key: od_agri_circulars
+    state: odisha
+    department: Department of Agriculture & Farmers' Empowerment
+    name: Odisha Agriculture Dept - Circulars & Office Orders
+    base_url: https://agri.odisha.gov.in/en/notification/circulars-%26-office-order
+    adapter: odisha_drupal_views
+    source_type: circular
+    crawl_strategy: drupal_views_table_pagination
+    access_policy: "same as od_agri_resolutions"
+    allowed_hosts: [agri.odisha.gov.in]
+    status: PARTIALLY_WORKING
+    active: true
+    schedule_cron: "55 6 * * *"
+    options:
+      default_document_type: circular
+      max_pages: 30
+
+  - key: od_agri_notifications
+    state: odisha
+    department: Department of Agriculture & Farmers' Empowerment
+    name: Odisha Agriculture Dept - Notifications
+    base_url: https://agri.odisha.gov.in/en/notifications/notification
+    adapter: odisha_drupal_views
+    source_type: notification
+    crawl_strategy: drupal_views_table_pagination
+    access_policy: "same as od_agri_resolutions"
+    allowed_hosts: [agri.odisha.gov.in]
+    status: PARTIALLY_WORKING
+    active: true
+    schedule_cron: "58 6 * * *"
+    options:
+      default_document_type: notification
+      max_pages: 30
+
+  - key: od_egazette
+    state: odisha
+    department: null
+    name: Odisha eGazette search
+    base_url: https://egazette.odisha.gov.in/search_gazette/
+    adapter: odisha_egazette
+    source_type: gazette
+    crawl_strategy: csrf_post_search
+    access_policy: "public search form with CSRF token, no CAPTCHA observed; year selector only offers 2024"
+    allowed_hosts: [egazette.odisha.gov.in]
+    status: PARTIALLY_WORKING
+    active: false
+    options: {}
+
+  - key: od_cabinet
+    state: odisha
+    department: Cabinet Secretariat
+    name: Odisha Cabinet decisions
+    base_url: https://cabinet.odisha.gov.in/
+    adapter: null
+    source_type: cabinet_decision
+    crawl_strategy: none
+    access_policy: "TLS certificate expired at audit time (SEC_E_CERT_EXPIRED); not crawled with verification disabled"
+    allowed_hosts: [cabinet.odisha.gov.in]
+    status: UNAVAILABLE
+    active: false
+
+  - key: od_ctz_edespatch
+    state: odisha
+    department: null
+    name: Odisha e-Despatch citizen portal
+    base_url: https://ctz.edodisha.gov.in/
+    adapter: null
+    source_type: other
+    crawl_strategy: none
+    access_policy: "citizen letter-tracking portal; office-wise despatch counts only, no public document listing found"
+    allowed_hosts: [ctz.edodisha.gov.in]
+    status: REQUIRES_MANUAL_ACCESS
+    active: false
+
+  - key: mp_socialjustice_circulars
+    state: madhya_pradesh
+    department: Social Justice and Disabled Persons Welfare Department
+    name: MP Social Justice Dept - Circulars
+    base_url: https://socialjustice.mp.gov.in/circular
+    adapter: mp_socialjustice_ajax
+    source_type: circular
+    crawl_strategy: codeigniter_ajax_offset_pagination
+    access_policy: "robots.txt served as HTML page (no rules); session-cookie bound AJAX listing"
+    allowed_hosts: [socialjustice.mp.gov.in, www.socialjustice.mp.gov.in]
+    status: VERIFIED_WORKING
+    active: true
+    schedule_cron: "20 7 * * *"
+    options:
+      page_size: 10
+      max_pages: 50
+
+  - key: mp_services_portal
+    state: madhya_pradesh
+    department: null
+    name: MP e-Service portal
+    base_url: https://services.mp.gov.in/eservice/
+    adapter: null
+    source_type: other
+    crawl_strategy: none
+    access_policy: "citizen service-delivery portal; no GR/circular repository found"
+    allowed_hosts: [services.mp.gov.in]
+    status: NOT_YET_TESTED
+    active: false
+
+  - key: mh_dte_grs
+    state: maharashtra
+    department: Directorate of Technical Education
+    name: Maharashtra DTE - GRs/Orders/Letters/Circulars
+    base_url: https://dte.maharashtra.gov.in/government-resolutions-orders-letters-circulars/
+    adapter: null
+    source_type: mixed
+    crawl_strategy: wordpress_table
+    access_policy: "public WordPress table (85 rows) with direct wp-content PDFs; adapter not yet written"
+    allowed_hosts: [dte.maharashtra.gov.in]
+    status: NOT_YET_TESTED
+    active: false
+
+  - key: mh_bhumiabhilekh_grs
+    state: maharashtra
+    department: Revenue Department (Land Records)
+    name: Maharashtra Bhumi Abhilekh GRs
+    base_url: https://www.bhumiabhilekh.maharashtra.gov.in/ActsAndRules/GovrmentResolutions
+    adapter: null
+    source_type: government_resolution
+    crawl_strategy: none
+    access_policy: "connection timed out from audit host (2026-10-21)"
+    allowed_hosts: [www.bhumiabhilekh.maharashtra.gov.in, bhumiabhilekh.maharashtra.gov.in]
+    status: UNAVAILABLE
+    active: false

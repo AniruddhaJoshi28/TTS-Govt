@@ -114,7 +114,7 @@ def main() -> int:
     rows = con.execute(sql + " ORDER BY publication_date DESC", params).fetchall()
 
     existing = {d.sha256 for d in load_corpus(args.corpus).values()} if args.corpus.exists() else set()
-    stats = {"imported": 0, "already_present": 0, "skipped_needs_ocr": 0, "skipped_no_text": 0, "missing_file": 0}
+    stats = {"imported": 0, "already_present": 0, "skipped_needs_ocr": 0, "skipped_no_text": 0, "missing_file": 0, "failed": 0}
     ocr_cache: dict[str, TesseractOcr | None] = {}
     imported: list[tuple[str, str]] = []
     for row in rows:
@@ -148,7 +148,12 @@ def main() -> int:
                 stats["skipped_needs_ocr"] += 1
                 continue
         print(f"→ {entry.id}  {entry.title[:70]}  (OCR pages: {sorted(forced) or 'scanned only'})")
-        doc = build_document(entry, pdf, row["pdf_sha256"], datetime.now(timezone.utc), ocr, force_ocr_pages=forced)
+        try:
+            doc = build_document(entry, pdf, row["pdf_sha256"], datetime.now(timezone.utc), ocr, force_ocr_pages=forced)
+        except Exception as exc:  # one bad PDF must not stop the whole import; it is retried next run
+            print(f"! failed, skipped: {entry.id}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            stats["failed"] += 1
+            continue
         if not any(p["origin"] != "portal_metadata" for p in doc.passages):
             stats["skipped_no_text"] += 1
             continue

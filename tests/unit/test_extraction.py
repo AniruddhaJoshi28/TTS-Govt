@@ -87,3 +87,18 @@ def test_amounts(text, expected):
 
 def test_bare_number_is_not_an_amount():
     assert extract_amounts("GR क्रमांक 2026/12") == []
+
+
+def test_pypdf_crash_on_a_page_routes_it_to_ocr(monkeypatch):
+    # Seen on a real MH GR: pypdf raised TypeError (float + IndirectObject) in a font width table.
+    from pypdf import PageObject
+
+    from services.pdf_ocr.extract import extract_pages
+    from tests.helpers import make_pdf
+
+    def boom(self, *a, **k):
+        raise TypeError("unsupported operand type(s) for +: 'float' and 'IndirectObject'")
+
+    monkeypatch.setattr(PageObject, "extract_text", boom)
+    pages = extract_pages(make_pdf("Some embedded text that would normally be read directly"))
+    assert pages[0].method == "needs_ocr" and pages[0].reason == "corrupt_encoding"

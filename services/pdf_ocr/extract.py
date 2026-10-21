@@ -72,7 +72,12 @@ def extract_pages(content: bytes) -> list[PageText]:
     pages = []
     try:
         for i, page in enumerate(reader.pages, start=1):
-            text = unicodedata.normalize("NFC", page.extract_text() or "").strip()
+            try:
+                text = unicodedata.normalize("NFC", page.extract_text() or "").strip()
+            except Exception:  # pypdf bugs on malformed fonts (e.g. TypeError in width tables)
+                # The page itself renders fine; only its text layer is unreadable, so OCR it.
+                pages.append(PageText(i, "needs_ocr", "", {}, reason="corrupt_encoding"))
+                continue
             if sum(1 for ch in text if not ch.isspace()) < MIN_TEXT_CHARS:
                 pages.append(PageText(i, "needs_ocr", "", {}, reason="no_text"))
             elif not assess(text).ok:

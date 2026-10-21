@@ -191,7 +191,11 @@ def preflight(api: Api, state: str, video: dict, allow_test_model: bool = False)
     docs = api.get(f"/documents?state={state}")["data"]
     if not docs:
         raise DemoAborted(f"no document for {state} in the corpus")
-    doc, lang = docs[0], video["language"]
+    # The scenes are written for the curated demo documents; crawled GRs listed first must not replace them.
+    from services.document_ingestion.manifest import load_manifest
+    curated = {e.id for e in load_manifest()}
+    doc, lang = next((d for d in docs if d["id"] in curated), docs[0]), video["language"]
+    video["_document_id"] = doc["id"]
 
     summary = api.post("/summaries", {"document_id": doc["id"], "language": lang})
     if summary.get("error") or summary["data"]["status"] != "summarised":
@@ -415,7 +419,8 @@ async def record(api: Api, base_url: str, state: str, video: dict, narration: di
         ctx = await browser.new_context(viewport={"width": WIDTH, "height": HEIGHT}, device_scale_factor=1,
                                         permissions=["microphone"] if question_audio else [])
         page = await ctx.new_page()
-        await page.goto(f"{base_url}/?state={state}&lang={lang}")
+        doc_param = f"&doc={video['_document_id']}" if video.get("_document_id") else ""
+        await page.goto(f"{base_url}/?state={state}&lang={lang}{doc_param}")
         await page.wait_for_selector("[data-testid=official-link]")
         card = video["card"]
         await page.evaluate(OVERLAY_JS, {"label": video["label"], "title": card["title"], "subtitle": card["subtitle"]})

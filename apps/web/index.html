@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>शासन निर्णय सहाय्यक</title>
-  <link rel="stylesheet" href="styles.css?v=20261019-upload">
+  <link rel="stylesheet" href="styles.css?v=20261021-grlist">
 </head>
 <body>
   <header class="topbar">
@@ -39,8 +39,53 @@
   </nav>
 
   <main class="layout">
+    <aside class="col-list card" id="gr-list-panel" data-testid="gr-list-panel" aria-labelledby="gr-list-title">
+      <div class="list-head">
+        <h2 id="gr-list-title" data-i18n="grListTitle"></h2>
+        <span id="gr-count" class="count" data-testid="gr-count"></span>
+      </div>
+      <input id="gr-search" class="gr-search" type="search" data-testid="gr-search" autocomplete="off">
+      <button type="button" id="btn-list-upload" class="btn upload-inline" data-testid="btn-list-upload" hidden>
+        <span aria-hidden="true">📤</span> <span data-i18n="uploadQuickBtn"></span>
+      </button>
+      <ul id="gr-list" class="gr-list" data-testid="gr-list" role="listbox" aria-labelledby="gr-list-title"></ul>
+    </aside>
+
     <section class="col-main">
-      <!-- Upload remains visible while an operator reviews an existing document. -->
+      <article id="doc-card" class="card doc-card" data-testid="doc-card" aria-live="polite"></article>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 data-i18n="summaryTitle"></h2>
+          <button id="btn-summary" class="btn primary" data-testid="btn-summary" data-i18n="summaryButton"></button>
+        </div>
+        <div id="summary" data-testid="summary" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="askTitle"></h2>
+        <form id="ask-form" class="ask" autocomplete="off">
+          <textarea id="question" data-testid="question" rows="2" maxlength="500"></textarea>
+          <div class="ask-actions">
+            <button type="button" id="btn-mic" class="btn" data-testid="btn-mic">
+              <span aria-hidden="true">🎙️</span> <span data-i18n="speak"></span>
+            </button>
+            <button type="submit" id="btn-ask" class="btn primary" data-testid="btn-ask" data-i18n="ask"></button>
+          </div>
+          <p id="mic-status" class="hint" aria-live="polite"></p>
+        </form>
+        <div id="answer" data-testid="answer" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <aside class="col-side card" id="source-panel" data-testid="source-panel" aria-live="polite">
+      <h2 data-i18n="sourceTitle"></h2>
+      <div id="source-body" class="source-body"><p class="muted" data-i18n="sourceHint"></p></div>
+    </aside>
+  </main>
+
+  <dialog id="upload-dialog" class="upload-dialog" data-testid="upload-dialog" aria-labelledby="upload-title">
+    <button type="button" class="dialog-close" id="upload-close" data-testid="upload-close" aria-label="Close">✕</button>
       <section id="upload-section" class="card upload-card" data-testid="upload-section" aria-labelledby="upload-title">
         <div class="upload-heading">
           <div>
@@ -79,41 +124,9 @@
         </div>
         <div id="upload-result" data-testid="upload-result"></div>
       </section>
-
-      <div id="doc-switcher" class="doc-selector-bar" style="display: none;" data-testid="doc-switcher"></div>
-      <article id="doc-card" class="card doc-card" data-testid="doc-card" aria-live="polite"></article>
-
-      <section class="card">
-        <div class="card-head">
-          <h2 data-i18n="summaryTitle"></h2>
-          <button id="btn-summary" class="btn primary" data-testid="btn-summary" data-i18n="summaryButton"></button>
-        </div>
-        <div id="summary" data-testid="summary" aria-live="polite"></div>
-      </section>
-
-      <section class="card">
-        <h2 data-i18n="askTitle"></h2>
-        <form id="ask-form" class="ask" autocomplete="off">
-          <textarea id="question" data-testid="question" rows="2" maxlength="500"></textarea>
-          <div class="ask-actions">
-            <button type="button" id="btn-mic" class="btn" data-testid="btn-mic">
-              <span aria-hidden="true">🎙️</span> <span data-i18n="speak"></span>
-            </button>
-            <button type="submit" id="btn-ask" class="btn primary" data-testid="btn-ask" data-i18n="ask"></button>
-          </div>
-          <p id="mic-status" class="hint" aria-live="polite"></p>
-        </form>
-        <div id="answer" data-testid="answer" aria-live="polite"></div>
-      </section>
-    </section>
-
-    <aside class="col-side card" id="source-panel" data-testid="source-panel" aria-live="polite">
-      <h2 data-i18n="sourceTitle"></h2>
-      <div id="source-body" class="source-body"><p class="muted" data-i18n="sourceHint"></p></div>
-    </aside>
-  </main>
+  </dialog>
 
   <footer class="footer" data-i18n="disclaimer"></footer>
-  <script src="app.js?v=20261019-upload"></script>
+  <script src="app.js?v=20261021-grlist"></script>
 </body>
 </html>

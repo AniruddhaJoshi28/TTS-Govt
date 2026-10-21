@@ -8,3 +8,4 @@ parler-tts @ git+https://github.com/huggingface/parler-tts.git
 soundfile
 onnxruntime-gpu
 huggingface_hub
+fastembed-gpu>=0.8,<0.9   # local embeddings for Qdrant (GOVT_MH / GOVT_MP / GOVT_OD)

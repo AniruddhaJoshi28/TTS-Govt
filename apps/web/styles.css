@@ -55,10 +55,18 @@ a { color: var(--primary); }
   background: var(--primary); color: #fff; border-color: var(--primary);
 }
 
-.layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.25rem; padding: 1.25rem 1.5rem; }
+.layout {
+  display: grid; grid-template-columns: minmax(250px, 22rem) minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1.25rem; padding: 1.25rem 1.5rem; align-items: start;
+}
 .col-main { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 .col-side { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow: auto; }
-@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .col-side { position: static; max-height: none; } }
+@media (max-width: 1280px) { .layout { grid-template-columns: minmax(240px, 19rem) minmax(0, 1fr); } .col-side { grid-column: 2; position: static; max-height: none; } }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; padding: 1rem; }
+  .col-side, .col-list { grid-column: auto; position: static; max-height: none; }
+  .col-list .gr-list { max-height: 45vh; }
+}
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; }
 .card-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
@@ -217,4 +225,43 @@ mark.unverified { background: none; color: var(--flag); text-decoration: underli
   .upload-heading { display: block; }
   .upload-ready { display: inline-block; margin: .25rem 0 .75rem; }
   .drop-zone { padding: 1.5rem .75rem; }
+}
+
+/* -- GR list ---------------------------------------------------------------- */
+.col-list { position: sticky; top: 1rem; display: flex; flex-direction: column; gap: .6rem;
+  max-height: calc(100vh - 2rem); padding: 1rem; }
+.list-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+.list-head h2 { margin: 0; }
+.count { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.gr-search { font: inherit; font-size: .92rem; padding: .5rem .7rem; border: 1px solid var(--line);
+  border-radius: 8px; width: 100%; background: var(--bg); }
+.gr-search:focus { outline: 2px solid var(--primary); outline-offset: 1px; background: var(--surface); }
+.gr-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0;
+  display: flex; flex-direction: column; gap: .35rem; overscroll-behavior: contain; }
+.gr-item { padding: .6rem .7rem; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
+  transition: background .12s ease, border-color .12s ease; }
+.gr-item:hover { background: var(--bg); border-color: var(--line); }
+.gr-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.gr-item.active { background: #eaf2fb; border-color: #b9d3ee; box-shadow: inset 3px 0 0 var(--primary); }
+.gr-date { font-size: .76rem; color: var(--muted); display: flex; gap: .4rem; align-items: center; }
+.gr-title { font-size: .9rem; font-weight: 600; line-height: 1.35; margin: .1rem 0;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.gr-dept { font-size: .76rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { font-size: .65rem; font-weight: 700; letter-spacing: .03em; padding: 0 .35rem; border-radius: 4px;
+  background: var(--warn-bg); color: var(--warn-ink); }
+.gr-list .empty { padding: 1rem .5rem; font-size: .9rem; }
+.btn.more, .upload-inline { width: 100%; justify-content: center; }
+
+/* -- upload dialog ------------------------------------------------------------ */
+.upload-dialog { border: 0; padding: 0; border-radius: var(--radius); width: min(640px, calc(100vw - 2rem));
+  background: transparent; }
+.upload-dialog::backdrop { background: rgba(20, 28, 45, .45); }
+.upload-dialog .upload-card { margin: 0; }
+.dialog-close { position: absolute; top: .6rem; right: .7rem; border: 0; background: transparent;
+  font-size: 1.1rem; cursor: pointer; color: var(--muted); z-index: 1; padding: .3rem .5rem; border-radius: 6px; }
+.dialog-close:hover { background: var(--bg); color: var(--ink); }
+.upload-dialog .upload-heading { padding-right: 2.25rem; }
+@media (max-width: 680px) {
+  .states { flex-wrap: nowrap; overflow-x: auto; padding: .75rem 1rem 0; scrollbar-width: none; }
+  .states button { flex: 0 0 auto; padding: .5rem 1rem; }
 }

@@ -68,6 +68,21 @@ def entry_for(row: sqlite3.Row) -> DocumentEntry:
     )
 
 
+def warm_summaries(app_url: str, docs: list[tuple[str, str]]) -> None:
+    """Generate each new GR's summary in its own language now, so the first click in the UI is a cache hit."""
+    for doc_id, lang in docs:
+        body = json.dumps({"document_id": doc_id, "language": lang}).encode()
+        req = urllib.request.Request(f"{app_url.rstrip('/')}/api/v1/summaries", data=body, method="POST",
+                                     headers={"Content-Type": "application/json", "X-API-Key": os.environ.get("API_KEY", "")})
+        try:
+            with urllib.request.urlopen(req, timeout=600) as resp:
+                status = json.loads(resp.read()).get("data", {}).get("status")
+            print(f"  summary {doc_id} ({lang}): {status}")
+        except Exception as exc:  # model down etc.: the UI will generate it on demand instead
+            print(f"  summary {doc_id} ({lang}) not pre-generated: {exc}", file=sys.stderr)
+            return
+
+
 def reload_app(url: str) -> None:
     req = urllib.request.Request(url, method="POST", headers={"X-API-Key": os.environ.get("API_KEY", "")})
     with urllib.request.urlopen(req, timeout=60) as resp:
@@ -82,6 +97,7 @@ def main() -> int:
     ap.add_argument("--state", choices=[s.value for s in STATE_MAP.values()])
     ap.add_argument("--limit", type=int)
     ap.add_argument("--reload-url", help="POST here afterwards so a running app picks up the new documents")
+    ap.add_argument("--warm-url", help="app base URL: pre-generate summaries of newly imported GRs")
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
 
@@ -100,6 +116,7 @@ def main() -> int:
     existing = {d.sha256 for d in load_corpus(args.corpus).values()} if args.corpus.exists() else set()
     stats = {"imported": 0, "already_present": 0, "skipped_needs_ocr": 0, "skipped_no_text": 0, "missing_file": 0}
     ocr_cache: dict[str, TesseractOcr | None] = {}
+    imported: list[tuple[str, str]] = []
     for row in rows:
         if args.limit and stats["imported"] >= args.limit:
             break
@@ -138,11 +155,14 @@ def main() -> int:
         save(doc, args.corpus)
         render_page_images(pdf, args.corpus / entry.id)
         existing.add(row["pdf_sha256"])
+        imported.append((entry.id, entry.language.value))
         stats["imported"] += 1
 
     print(json.dumps(stats, indent=2))
     if args.reload_url and stats["imported"]:
         reload_app(args.reload_url)
+    if args.warm_url and imported:
+        warm_summaries(args.warm_url, imported)
     return 0
 
 

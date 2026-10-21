@@ -70,6 +70,7 @@ from services.document_ingestion.corpus import (
 from services.document_ingestion.manifest import DocumentEntry
 from services.pdf_ocr.extract import extract_pages
 from services.retrieval.bm25 import BM25Index, Passage
+from services.retrieval.vector_store import HybridIndex, VectorStore, sync_corpus
 from services.slm_orchestrator.answer import answer
 from services.slm_orchestrator.llm import LLMConfig, LLMUnavailable, OpenAICompatibleLLM
 from services.slm_orchestrator.summarise import summarise
@@ -129,11 +130,37 @@ class Runtime:
         self.speech_cache: dict[str, dict] = {}
         self.pool = ThreadPoolExecutor(max_workers=1)  # one GPU, one synthesis at a time
         self.lock = threading.Lock()
+        # Qdrant (per-state collections GOVT_MH ...). Optional: without QDRANT_URL, Q&A uses BM25 only.
+        self.vectors: VectorStore | None = None
+        self.vector_status: dict = {"status": "not_configured"}
+        try:
+            self.vectors = VectorStore.from_env()
+        except Exception as exc:
+            self.vector_status = {"status": "unavailable", "detail": f"{type(exc).__name__}: {exc}"}
+        self._index_pool = ThreadPoolExecutor(max_workers=1)  # serialises Qdrant indexing
         self.reload()
 
     def reload(self) -> None:
         self.corpus = load_corpus(self.corpus_dir) if self.corpus_dir.exists() else {}
         self.indexes = {doc_id: BM25Index(doc.to_passages()) for doc_id, doc in self.corpus.items()}
+        if self.vectors is not None:
+            # Index in the background: startup and /reload never wait on embeddings.
+            self.vector_status = {"status": "syncing", "detail": f"{len(self.corpus)} documents"}
+            self._index_pool.submit(self._sync_vectors, list(self.corpus.values()))
+
+    def _sync_vectors(self, docs: list) -> None:
+        try:
+            stats = sync_corpus(self.vectors, docs, on_progress=lambda doc_id, n: _log_print(
+                f"🧭 [QDRANT] indexed {doc_id} ({n} passages)"))
+            self.vector_status = {"status": "ok" if not stats["failed"] else "degraded", "detail": stats}
+            _log_print(f"🧭 [QDRANT] sync complete: {stats}")
+        except Exception as exc:
+            self.vector_status = {"status": "unavailable", "detail": f"{type(exc).__name__}: {exc}"}
+            _log_print(f"⚠️ [QDRANT] sync failed, Q&A falls back to BM25: {exc}")
+
+    def index_one(self, doc: CorpusDocument) -> None:
+        if self.vectors is not None:
+            self._index_pool.submit(self._sync_vectors, [doc])
 
     def load_speech(self) -> None:
         tts = os.environ.get("TTS_ENGINE", "")
@@ -297,6 +324,9 @@ def health(request: Request) -> Envelope[Health]:
                          detail=f"{len(rt.corpus)} documents"),
         ocr,
         _llm_status(),
+        DependencyStatus(name="qdrant", status={"syncing": "ok", "degraded": "unavailable"}.get(
+            rt.vector_status["status"], rt.vector_status["status"]),
+            detail=str(rt.vector_status.get("detail")) if rt.vector_status.get("detail") is not None else None),
         DependencyStatus(name="tts", status="ok" if rt.tts else ("unavailable" if rt.tts_error else "not_configured"),
                          detail=rt.tts_error),
         DependencyStatus(name="stt", status="ok" if rt.stt else ("unavailable" if rt.stt_error else "not_configured"),
@@ -349,6 +379,7 @@ def list_documents(request: Request, state: State | None = None, language: Langu
     if q:
         hits = {h.passage.document_id for d in docs for h in rt.indexes[d.entry.id].search(q, k=3)}
         docs = [d for d in docs if d.entry.id in hits]
+    docs.sort(key=lambda d: (d.entry.issued, d.retrieved_at), reverse=True)  # newest GRs first
     return Envelope[list[DocumentSummary]](request_id=request.state.request_id, language=language or Language.ENGLISH,
                                            data=[_summary_of(d) for d in docs])
 
@@ -483,24 +514,25 @@ class QaOut(BaseModel):
 def question_answer(request: Request, body: QaRequest, refresh: bool = False):
     if body.document_id:
         doc = _doc(body.document_id)
-        index = rt.indexes.get(doc.entry.id)
+        index = HybridIndex(rt.indexes[doc.entry.id], rt.vectors, doc.entry.state.value, doc.entry.id)
         scope = doc.sha256
         target_name = f"doc '{doc.entry.id}'"
     else:
         if body.state is None:
             raise ApiError(400, "state_required", "Please choose a state or a document so the right orders are searched.")
         docs = [d for d in rt.corpus.values() if d.entry.state == body.state]
-        index = BM25Index([p for d in docs for p in d.to_passages()])
+        index = HybridIndex(BM25Index([p for d in docs for p in d.to_passages()]), rt.vectors, body.state.value)
         scope = ",".join(sorted(d.sha256 for d in docs))
         target_name = f"state '{body.state.value}' ({len(docs)} docs)"
     llm = _require_llm()
+    retrieval = "hybrid" if rt.vectors is not None else "bm25"
 
     # The same question about the same document version gets the same answer (also what makes
     # recorded demos show exactly the answer that was checked). refresh=true asks again.
     question = " ".join(body.question.split())
     passages_n = len(index.passages)
     key = hashlib.sha256(
-        f"{GENERATION_PIPELINE_VERSION}|{scope}|{passages_n}|{body.language.value}|{llm.model}|{question}".encode()
+        f"{GENERATION_PIPELINE_VERSION}|{scope}|{passages_n}|{body.language.value}|{llm.model}|{retrieval}|{question}".encode()
     ).hexdigest()[:24]
     cache = CACHE_DIR / "answers" / f"{key}.json"
     cached = _read_cache(cache) if cache.exists() and not refresh else None
@@ -574,7 +606,9 @@ def _run_synthesis(job_id: str, req: SynthesisRequest) -> None:
           dependencies=[Depends(require_key)])
 def create_synthesis(request: Request, body: SynthesisRequest):
     if rt.tts is None:
-        raise ApiError(503, "tts_unavailable", "Speech synthesis is not available. The text answer is still valid.",
+        reason = rt.tts_error or ("TTS_ENGINE is not set" if not os.environ.get("TTS_ENGINE") else "engine not loaded")
+        _log_print(f"🔇 [TTS UNAVAILABLE] {reason}")
+        raise ApiError(503, "tts_unavailable", f"Speech synthesis is not available ({reason}). The text answer is still valid.",
                        retryable=bool(rt.tts_error))
     job_id = uuid.uuid4().hex
     cached = rt.speech_cache.get(_speech_key(body))
@@ -855,6 +889,7 @@ async def upload_document(
     _log_print(f"  [Step 6/6] ⚡ Live indexing passages into in-memory BM25 index...")
     rt.corpus[doc_id] = corpus_doc
     rt.indexes[doc_id] = BM25Index(corpus_doc.to_passages())
+    rt.index_one(corpus_doc)
     _log_print(f"      ✓ Document '{doc_id}' is LIVE in corpus ({len(rt.corpus)} total documents active)")
     _log_print(f"      ✓ Ready for: Q&A queries, 9-point structured summaries, TTS audio synthesis")
     _log_print(f"✅ [INGESTION PIPELINE COMPLETE] Document ID: {doc_id}")

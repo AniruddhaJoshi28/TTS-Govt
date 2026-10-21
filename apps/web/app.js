@@ -33,7 +33,7 @@ const I18N = {
       portal_metadata: "अधिकृत पोर्टलवरील माहिती" },
     placeholder: "आपला प्रश्न इथे लिहा", noDocs: "या राज्यासाठी दस्तऐवज अजून उपलब्ध नाहीत.",
     micDenied: "मायक्रोफोन वापरण्याची परवानगी मिळाली नाही.",
-    docType: { circular: "परिपत्रक", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड केलेला दस्तऐवज" },
+    docType: { circular: "परिपत्रक", notification: "अधिसूचना", gr: "शासन निर्णय", government_resolution: "शासन निर्णय", resolution: "ठराव", order: "आदेश", office_order: "कार्यालयीन आदेश", gazette: "राजपत्र", cabinet_decision: "मंत्रिमंडळ निर्णय", memorandum: "ज्ञापन", other: "दस्तऐवज", uploaded: "अपलोड केलेला दस्तऐवज" },
     uploadsTab: "अपलोड केलेले दस्तऐवज", uploadTitle: "GR / दस्तऐवज अपलोड करा",
     uploadKicker: "नवीन शासन निर्णय जोडा", uploadReady: "सुरक्षित स्थानिक प्रक्रिया", uploadLimit: "कमाल फाइल आकार: 50 MB",
     uploadQuickBtn: "नवीन GR अपलोड करा",
@@ -74,7 +74,7 @@ const I18N = {
       portal_metadata: "आधिकारिक पोर्टल की जानकारी" },
     placeholder: "अपना सवाल यहाँ लिखें", noDocs: "इस राज्य के दस्तावेज़ अभी उपलब्ध नहीं हैं।",
     micDenied: "माइक्रोफ़ोन की अनुमति नहीं मिली।",
-    docType: { circular: "परिपत्र", notification: "अधिसूचना", gr: "शासन निर्णय", uploaded: "अपलोड किया गया दस्तावेज़" },
+    docType: { circular: "परिपत्र", notification: "अधिसूचना", gr: "शासन निर्णय", government_resolution: "शासन निर्णय", resolution: "संकल्प", order: "आदेश", office_order: "कार्यालय आदेश", gazette: "राजपत्र", cabinet_decision: "मंत्रिपरिषद निर्णय", memorandum: "ज्ञापन", other: "दस्तावेज़", uploaded: "अपलोड किया गया दस्तावेज़" },
     uploadsTab: "अपलोड किए गए दस्तावेज़", uploadTitle: "GR / दस्तावेज़ अपलोड करें",
     uploadKicker: "नया सरकारी आदेश जोड़ें", uploadReady: "सुरक्षित स्थानीय प्रोसेसिंग", uploadLimit: "अधिकतम फ़ाइल आकार: 50 MB",
     uploadQuickBtn: "नया आदेश अपलोड करें",
@@ -115,7 +115,7 @@ const I18N = {
       portal_metadata: "ସରକାରୀ ପୋର୍ଟାଲର ତଥ୍ୟ" },
     placeholder: "ଆପଣଙ୍କ ପ୍ରଶ୍ନ ଏଠାରେ ଲେଖନ୍ତୁ", noDocs: "ଏହି ରାଜ୍ୟ ପାଇଁ ଦଲିଲ ଏପର୍ଯ୍ୟନ୍ତ ଉପଲବ୍ଧ ନାହିଁ।",
     micDenied: "ମାଇକ୍ରୋଫୋନ ଅନୁମତି ମିଳିଲା ନାହିଁ।",
-    docType: { circular: "ପରିପତ୍ର", notification: "ବିଜ୍ଞପ୍ତି", gr: "ସରକାରୀ ନିଷ୍ପତ୍ତି", uploaded: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ" },
+    docType: { circular: "ପରିପତ୍ର", notification: "ବିଜ୍ଞପ୍ତି", gr: "ସରକାରୀ ନିଷ୍ପତ୍ତି", government_resolution: "ସରକାରୀ ନିଷ୍ପତ୍ତି", resolution: "ସଂକଳ୍ପ", order: "ଆଦେଶ", office_order: "କାର୍ଯ୍ୟାଳୟ ଆଦେଶ", gazette: "ରାଜପତ୍ର", cabinet_decision: "ମନ୍ତ୍ରିମଣ୍ଡଳ ନିଷ୍ପତ୍ତି", memorandum: "ସ୍ମାରକପତ୍ର", other: "ଦଲିଲ", uploaded: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ" },
     uploadsTab: "ଅପଲୋଡ ହୋଇଥିବା ଦଲିଲ", uploadTitle: "GR / ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
     uploadKicker: "ନୂଆ ସରକାରୀ ନିଷ୍ପତ୍ତି ଯୋଡ଼ନ୍ତୁ", uploadReady: "ସୁରକ୍ଷିତ ସ୍ଥାନୀୟ ପ୍ରକ୍ରିୟା", uploadLimit: "ସର୍ବାଧିକ ଫାଇଲ୍ ଆକାର: 50 MB",
     uploadQuickBtn: "ନୂତନ ଦଲିଲ ଅପଲୋଡ କରନ୍ତୁ",
@@ -156,7 +156,7 @@ const I18N = {
       portal_metadata: "Information from the official portal" },
     placeholder: "Type your question here", noDocs: "No documents are available for this state yet.",
     micDenied: "Microphone permission was not granted.",
-    docType: { circular: "Circular", notification: "Notification", gr: "Government Resolution", uploaded: "Uploaded Document" },
+    docType: { circular: "Circular", notification: "Notification", gr: "Government Resolution", government_resolution: "Government Resolution", resolution: "Resolution", order: "Order", office_order: "Office Order", gazette: "Gazette", cabinet_decision: "Cabinet Decision", memorandum: "Memorandum", other: "Document", uploaded: "Uploaded Document" },
     uploadsTab: "Uploaded Documents", uploadTitle: "Upload a GR / Document",
     uploadKicker: "ADD A GOVERNMENT RESOLUTION", uploadReady: "Secure local processing", uploadLimit: "Maximum file size: 50 MB",
     uploadQuickBtn: "Upload GR",
@@ -169,9 +169,26 @@ const I18N = {
   },
 };
 
+// Strings for the GR list, merged into each language (drafts pending native-speaker review).
+const I18N_LIST = {
+  mr: { grListTitle: "शासन निर्णय", searchPlaceholder: "शीर्षक, विभाग किंवा दिनांक शोधा",
+        grCount: (n, all) => n === all ? `${all} GR` : `${n} / ${all} GR`, noMatch: "जुळणारे GR सापडले नाहीत.",
+        showMore: n => `आणखी ${n} दाखवा`, summarising: "सारांश तयार होत आहे…" },
+  hi: { grListTitle: "शासन आदेश", searchPlaceholder: "शीर्षक, विभाग या तारीख खोजें",
+        grCount: (n, all) => n === all ? `${all} आदेश` : `${n} / ${all} आदेश`, noMatch: "कोई मेल खाता आदेश नहीं मिला।",
+        showMore: n => `${n} और दिखाएँ`, summarising: "सारांश तैयार हो रहा है…" },
+  or: { grListTitle: "ସରକାରୀ ସଂକଳ୍ପ", searchPlaceholder: "ଶୀର୍ଷକ, ବିଭାଗ କିମ୍ବା ତାରିଖ ଖୋଜନ୍ତୁ",
+        grCount: (n, all) => n === all ? `${all} ଦଲିଲ` : `${n} / ${all} ଦଲିଲ`, noMatch: "କୌଣସି ମେଳ ଖାଉଥିବା ଦଲିଲ ମିଳିଲା ନାହିଁ।",
+        showMore: n => `ଆଉ ${n} ଦେଖାନ୍ତୁ`, summarising: "ସାରାଂଶ ପ୍ରସ୍ତୁତ ହେଉଛି…" },
+  en: { grListTitle: "Government resolutions", searchPlaceholder: "Search title, department or date",
+        grCount: (n, all) => n === all ? `${all} GRs` : `${n} of ${all} GRs`, noMatch: "No matching GRs.",
+        showMore: n => `Show ${n} more`, summarising: "Preparing summary…" },
+};
+for (const [lang, strings] of Object.entries(I18N_LIST)) Object.assign(I18N[lang], strings);
+
 const STATE_LANG = { MH: "mr", MP: "hi", OD: "or", UP: "mr" };
 const API = "/api/v1";
-const ui = { state: "MH", lang: "mr", doc: null, detail: null, docs: [], passages: {}, lastAnswer: "" };
+const ui = { state: "MH", lang: "mr", doc: null, detail: null, docs: [], passages: {}, lastAnswer: "", seq: 0, listLimit: 150 };
 const $ = sel => document.querySelector(sel);
 const t = () => I18N[ui.lang];
 
@@ -203,6 +220,7 @@ function applyStaticText() {
     if (typeof val === "string") el.textContent = val;
   });
   $("#question").placeholder = t().placeholder;
+  $("#gr-search").placeholder = t().searchPlaceholder;
   $("#language").value = ui.lang;
   document.querySelectorAll(".states button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.state === ui.state)));
 }
@@ -225,89 +243,127 @@ function fmtDate(iso) {
   return d.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
 }
 
-// -- document card & selector ------------------------------------------------
+// -- GR list (crawled documents per state) ----------------------------------
 
-function renderDocSwitcher() {
-  const switcher = $("#doc-switcher");
-  if (!switcher) return;
-  if (!ui.docs || ui.docs.length <= 1) {
-    switcher.style.display = "none";
-    switcher.innerHTML = "";
-    return;
-  }
-  const s = t();
-  const options = ui.docs.map(d => {
-    const title = ui.lang === "en" ? (d.title_en || d.title) : d.title;
-    const sel = d.id === (ui.doc && ui.doc.id) ? " selected" : "";
-    return `<option value="${esc(d.id)}"${sel}>${esc(title)} (${esc(d.pages)} ${ui.lang === "mr" ? "पृष्ठे" : "pages"})</option>`;
-  }).join("");
-  switcher.style.display = "flex";
-  switcher.innerHTML = `<label for="doc-select">${esc(s.selectDoc)}:</label>
-    <select id="doc-select" data-testid="doc-select">${options}</select>`;
-  $("#doc-select").addEventListener("change", e => selectDocument(e.target.value));
+const LIST_PAGE = 150;
+
+function docTitle(d) { return ui.lang === "en" ? (d.title_en || d.title) : d.title; }
+function docDept(d) { return ui.lang === "en" ? (d.department_en || d.department) : d.department; }
+
+function filteredDocs() {
+  const q = ($("#gr-search").value || "").trim().toLowerCase();
+  if (!q) return ui.docs;
+  return ui.docs.filter(d => [d.title, d.title_en, d.department, d.department_en, d.issued, d.id]
+    .some(v => v && String(v).toLowerCase().includes(q)));
 }
 
-async function selectDocument(docId) {
+function renderList() {
+  const list = $("#gr-list"), s = t(), docs = filteredDocs();
+  $("#gr-count").textContent = s.grCount(docs.length, ui.docs.length);
+  $("#btn-list-upload").hidden = ui.state !== "UP";
+  if (!ui.docs.length) {
+    list.innerHTML = `<li class="muted empty">${esc(ui.state === "UP" ? s.noUploadsYet : s.noDocs)}</li>`;
+    return;
+  }
+  if (!docs.length) { list.innerHTML = `<li class="muted empty">${esc(s.noMatch)}</li>`; return; }
+  const shown = docs.slice(0, ui.listLimit);
+  list.innerHTML = shown.map(d => {
+    const active = ui.doc && d.id === ui.doc.id;
+    const scan = d.text_origins && d.text_origins.includes("ocr") ? `<span class="tag">OCR</span>` : "";
+    return `<li role="option" aria-selected="${active}" tabindex="0" class="gr-item${active ? " active" : ""}"
+        data-doc="${esc(d.id)}" data-testid="gr-item">
+      <div class="gr-date">${esc(fmtDate(d.issued))}${scan}</div>
+      <div class="gr-title">${esc(docTitle(d))}</div>
+      <div class="gr-dept">${esc(docDept(d))}</div></li>`;
+  }).join("") + (docs.length > shown.length
+    ? `<li><button type="button" class="btn more" id="gr-more">${esc(s.showMore(docs.length - shown.length))}</button></li>` : "");
+}
+
+function syncUrl() {
+  const p = new URLSearchParams({ state: ui.state, lang: ui.lang });
+  if (ui.doc) p.set("doc", ui.doc.id);
+  history.replaceState(null, "", `?${p}`);
+}
+
+async function selectDocument(docId, { autoSummary = true } = {}) {
   const target = ui.docs.find(d => d.id === docId);
   if (!target) return;
+  const seq = ++ui.seq;  // a later click wins; stale responses are dropped
   ui.doc = target;
   ui.detail = null;
   ui.passages = {};
   $("#summary").innerHTML = "";
   $("#answer").innerHTML = "";
   $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
+  renderList();
+  syncUrl();
   const card = $("#doc-card");
   card.innerHTML = `<p class="loading">${esc(t().loading)}</p>`;
   try {
-    ui.detail = (await api(`/documents/${encodeURIComponent(ui.doc.id)}`)).data;
-    ui.detail.passages.forEach(p => { ui.passages[p.passage_id] = p; });
+    const detail = (await api(`/documents/${encodeURIComponent(target.id)}`)).data;
+    if (seq !== ui.seq) return;
+    ui.detail = detail;
+    detail.passages.forEach(p => { ui.passages[p.passage_id] = p; });
     renderDocCard();
-    renderDocSwitcher();
+    if (window.matchMedia("(max-width: 1100px)").matches) card.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (autoSummary) createSummary();
   } catch (err) {
-    card.innerHTML = `<p class="error">${esc(errorText(err))}</p>`;
+    if (seq === ui.seq) card.innerHTML = `<p class="error">${esc(errorText(err))}</p>`;
   }
 }
 
-async function loadState(state, lang) {
+async function loadState(state, lang, docId = null) {
   ui.state = state;
   ui.lang = lang || STATE_LANG[state] || "mr";
   ui.doc = ui.detail = null;
   ui.docs = [];
   ui.passages = {};
+  ui.listLimit = LIST_PAGE;
+  const seq = ++ui.seq;
   applyStaticText();
+  $("#gr-search").value = "";
   $("#summary").innerHTML = "";
   $("#answer").innerHTML = "";
   $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
-
-  // Upload is a primary action, not a hidden state. Keep it visible while an
-  // operator reviews an existing document or browses uploaded documents.
-  const uploadSec = $("#upload-section");
-  if (uploadSec) uploadSec.hidden = false;
-  const switcher = $("#doc-switcher");
-  if (switcher) switcher.style.display = "none";
-
+  $("#gr-list").innerHTML = `<li class="loading">${esc(t().loading)}</li>`;
   const card = $("#doc-card");
-  card.innerHTML = `<p class="loading">${esc(t().loading)}</p>`;
+  card.innerHTML = "";
   try {
     const docs = (await api(`/documents?state=${state}`)).data;
+    if (seq !== ui.seq) return;
     ui.docs = docs;
+    renderList();
     if (!docs.length) {
-      if (state === "UP") {
-        card.innerHTML = `<p class="muted">${esc(t().noUploadsYet)}</p>`;
-      } else {
-        card.innerHTML = `<p class="muted">${esc(t().noDocs)}</p>`;
-      }
+      card.innerHTML = `<p class="muted">${esc(state === "UP" ? t().noUploadsYet : t().noDocs)}</p>`;
+      syncUrl();
       return;
     }
-    ui.doc = docs[0];
-    ui.detail = (await api(`/documents/${encodeURIComponent(ui.doc.id)}`)).data;
-    ui.detail.passages.forEach(p => { ui.passages[p.passage_id] = p; });
-    renderDocCard();
-    renderDocSwitcher();
+    await selectDocument(docs.some(d => d.id === docId) ? docId : docs[0].id);
   } catch (err) {
-    card.innerHTML = `<p class="error">${esc(errorText(err))}</p>`;
+    if (seq === ui.seq) $("#gr-list").innerHTML = `<li class="error">${esc(errorText(err))}</li>`;
   }
 }
+
+$("#gr-list").addEventListener("click", e => {
+  if (e.target.closest("#gr-more")) { ui.listLimit += LIST_PAGE; renderList(); return; }
+  const item = e.target.closest("[data-doc]");
+  if (item && (!ui.doc || item.dataset.doc !== ui.doc.id)) selectDocument(item.dataset.doc);
+});
+$("#gr-list").addEventListener("keydown", e => {
+  const item = e.target.closest("[data-doc]");
+  if (!item) return;
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectDocument(item.dataset.doc); }
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const sib = e.key === "ArrowDown" ? item.nextElementSibling : item.previousElementSibling;
+    if (sib && sib.dataset.doc) sib.focus();
+  }
+});
+let searchTimer = null;
+$("#gr-search").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { ui.listLimit = LIST_PAGE; renderList(); }, 120);
+});
 
 function renderDocCard() {
   const d = ui.doc, s = t();
@@ -383,16 +439,18 @@ document.addEventListener("click", e => {
 async function createSummary() {
   if (!ui.doc) return;
   const box = $("#summary"), btn = $("#btn-summary"), s = t();
+  const docId = ui.doc.id, lang = ui.lang, seq = ui.seq;
   btn.disabled = true;
-  box.innerHTML = `<p class="loading">${esc(s.loading)}</p>`;
+  box.innerHTML = `<p class="loading">${esc(s.summarising)}</p>`;
   try {
     const body = await api("/summaries", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ document_id: ui.doc.id, language: ui.lang }),
+      body: JSON.stringify({ document_id: docId, language: lang }),
     });
+    if (seq !== ui.seq || lang !== ui.lang) return;  // user moved on to another GR or language
     renderSummary(body);
   } catch (err) {
-    box.innerHTML = `<p class="error" data-testid="summary-error">${esc(errorText(err))}</p>`;
+    if (seq === ui.seq) box.innerHTML = `<p class="error" data-testid="summary-error">${esc(errorText(err))}</p>`;
   } finally {
     btn.disabled = false;
   }
@@ -616,11 +674,9 @@ async function uploadFile(file) {
         </div>
       </div>`;
 
-    // Refresh state and select the newly uploaded document
-    await loadState("UP", ui.lang);
-    if (resData.document_id) {
-      await selectDocument(resData.document_id);
-    }
+    // Show the new document in the Uploads library.
+    setTimeout(() => $("#upload-dialog").close(), 1200);
+    await loadState("UP", ui.lang, resData.document_id);
   } catch (err) {
     fill.style.width = "100%";
     fill.style.background = "var(--flag)";
@@ -681,27 +737,27 @@ if (dropZone && fileInput) {
 
 // -- wiring ------------------------------------------------------------------
 
+function openUpload() {
+  const dlg = $("#upload-dialog");
+  if (!dlg.open) dlg.showModal();
+}
 document.querySelectorAll(".states button").forEach(b => b.addEventListener("click", () => loadState(b.dataset.state)));
 $("#language").addEventListener("change", e => {
   ui.lang = e.target.value;
   applyStaticText();
-  if (ui.detail) {
-    renderDocCard();
-    renderDocSwitcher();
-  }
-  $("#summary").innerHTML = "";
+  renderList();
+  syncUrl();
   $("#answer").innerHTML = "";
+  $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
+  if (ui.detail) { renderDocCard(); createSummary(); } else { $("#summary").innerHTML = ""; }
 });
 $("#btn-summary").addEventListener("click", createSummary);
-const btnTopUpload = $("#btn-top-upload");
-if (btnTopUpload) {
-  btnTopUpload.addEventListener("click", () => {
-    $("#upload-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    fileInput?.click();
-  });
-}
+$("#btn-top-upload").addEventListener("click", openUpload);
+$("#btn-list-upload").addEventListener("click", openUpload);
+$("#upload-close").addEventListener("click", () => $("#upload-dialog").close());
+$("#upload-dialog").addEventListener("click", e => { if (e.target.id === "upload-dialog") e.target.close(); });
 
 const params = new URLSearchParams(location.search);
 const initialState = params.get("state") in STATE_LANG ? params.get("state") : "MH";
 const initialLang = params.get("lang") in I18N ? params.get("lang") : null;
-loadState(initialState, initialLang);
+loadState(initialState, initialLang, params.get("doc"));

@@ -157,19 +157,20 @@ def main() -> int:
             continue
         entry = entry_for(row)
         forced = unusable_pages(con, row["id"])
-        ocr = None
-        if forced or row["extraction_status"] in ("needs_ocr", "pending", "failed"):
-            langs = OCR_LANGS[entry.language.value]
-            if langs not in ocr_cache:
-                try:
-                    ocr_cache[langs] = TesseractOcr(cmd=require_languages(langs))
-                except OcrUnavailable as exc:
-                    print(f"! OCR not available for {langs}: {exc}", file=sys.stderr)
-                    ocr_cache[langs] = None
-            ocr = ocr_cache[langs]
-            if ocr is None and forced:
-                stats["skipped_needs_ocr"] += 1
-                continue
+        # Always provide OCR when installed: build_document only uses it for pages without a usable
+        # text layer (scanned pages, or pages the crawler flagged). The crawler's own OCR text is not
+        # in the PDF, so a scan the crawler already OCR'd still needs OCR here.
+        langs = OCR_LANGS[entry.language.value]
+        if langs not in ocr_cache:
+            try:
+                ocr_cache[langs] = TesseractOcr(cmd=require_languages(langs))
+            except OcrUnavailable as exc:
+                print(f"! OCR not available for {langs}: {exc}", file=sys.stderr)
+                ocr_cache[langs] = None
+        ocr = ocr_cache[langs]
+        if ocr is None and forced:
+            stats["skipped_needs_ocr"] += 1
+            continue
         print(f"→ {entry.id}  {entry.title[:70]}  (OCR pages: {sorted(forced) or 'scanned only'})")
         try:
             doc = build_document(entry, pdf, row["pdf_sha256"], datetime.now(timezone.utc), ocr, force_ocr_pages=forced)

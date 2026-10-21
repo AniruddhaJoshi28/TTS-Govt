@@ -131,11 +131,19 @@ def build_document(
     ocr: TesseractOcr | None,
     corrections: list[Correction] = (),
     transcriptions: list[Transcription] = (),
+    force_ocr_pages: frozenset[int] = frozenset(),
 ) -> CorpusDocument:
+    """``force_ocr_pages``: 1-based pages whose embedded text is known to be corrupt (e.g. flagged by
+    the crawler's glyph-order / broken-ToUnicode checks); they are OCR'd, or left empty without OCR."""
     pages: list[PageRecord] = []
     for p in extract_pages(pdf):
         ocr_page: OcrPage | None = None
-        if p.method == "embedded":
+        if p.page in force_ocr_pages and ocr is None:
+            text, origin, conf = "", "ocr", None
+        elif p.page in force_ocr_pages:
+            ocr_page = ocr.page(pdf, p.page, OCR_LANGS[entry.language.value])
+            text, origin, conf = ocr_page.text, "ocr", round(ocr_page.mean_conf, 1)
+        elif p.method == "embedded":
             text, origin, conf = p.text, "embedded", None
         elif ocr is None:
             text, origin, conf = "", "ocr", None

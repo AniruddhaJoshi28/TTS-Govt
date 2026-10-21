@@ -75,3 +75,22 @@ def test_signed_correction_replaces_and_trusts_span():
     doc = build_document(entry(), make_pdf(None), "ab" * 32, T0, FakeOcr("दिनांक 0।.0.2026 से"), corrections=[fix])
     page = doc.pages[0]
     assert "01.10.2026" in page.text and page.untrusted == []
+
+
+def test_forced_pages_are_ocred_even_with_embedded_text():
+    # Crawler-flagged pages (e.g. Devanagari glyph-order errors) must not trust the embedded layer.
+    pdf = make_pdf("Corrupt embedded layer text that looks fine to a naive extractor and is long enough")
+    doc = build_document(entry(), pdf, "ab" * 32, T0, FakeOcr("सही ओसीआर पाठ"), force_ocr_pages=frozenset({1}))
+    assert doc.pages[0].origin == "ocr" and doc.pages[0].text == "सही ओसीआर पाठ"
+
+
+def test_forced_pages_without_ocr_are_left_empty():
+    pdf = make_pdf("Corrupt embedded layer text that looks fine to a naive extractor and is long enough")
+    doc = build_document(entry(), pdf, "ab" * 32, T0, None, force_ocr_pages=frozenset({1}))
+    assert doc.pages[0].text == "" and not [p for p in doc.passages if p["page"] == 1]
+
+
+def test_unforced_embedded_pages_unchanged():
+    pdf = make_pdf("Embedded text that is long enough to be treated as a real digital text layer here")
+    doc = build_document(entry(), pdf, "ab" * 32, T0, FakeOcr("should not be used"))
+    assert doc.pages[0].origin == "embedded"

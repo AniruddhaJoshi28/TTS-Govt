@@ -108,10 +108,16 @@ for d in data["dependencies"]:
     print(f"  {d['name']:7s} {d['status']:15s} {d.get('detail') or ''}")
     if d["status"] != "ok":
         bad.append(d["name"])
-if bad == ["stt"]:
-    print("\nWarning: voice input (STT) is not loaded; the UI will ask users to type. "
-          "Videos can still be recorded without --question-audio. See logs/app.log.")
-elif bad:
+optional = {
+    "stt": "voice input (STT) is not loaded; the UI will ask users to type. "
+           "Videos can still be recorded without --question-audio.",
+    "qdrant": "vector search (Qdrant) is off; Q&A uses keyword search only. "
+              "Install: .venvs/app/bin/pip install 'qdrant-client>=1.14,<1.16' 'fastembed-gpu>=0.8,<0.9'",
+}
+for name in [b for b in bad if b in optional]:
+    print(f"\nWarning: {optional[name]} See logs/app.log.")
+bad = [b for b in bad if b not in optional]
+if bad:
     print(f"\nNot ready: {', '.join(bad)}. Check logs/app.log and logs/vllm.log.", file=sys.stderr)
     sys.exit(1)
 EOF

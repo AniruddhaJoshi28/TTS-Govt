@@ -92,6 +92,26 @@ class ApiError(Exception):
 
 # -- runtime state -----------------------------------------------------------
 
+def _load_dotenv_if_present() -> None:
+    env_path = ROOT / ".env"
+    if not env_path.is_file():
+        return
+    try:
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k, v = k.strip(), v.strip().strip("'\"")
+            if k and k not in os.environ:
+                os.environ[k] = v
+    except Exception:
+        pass
+
+
+_load_dotenv_if_present()
+
+
 class Runtime:
     def __init__(self):
         self.corpus_dir = Path(os.environ.get("CORPUS_DIR", ROOT / "data" / "corpus"))

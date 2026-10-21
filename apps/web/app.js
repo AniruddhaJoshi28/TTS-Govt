@@ -173,18 +173,24 @@ const I18N = {
 const I18N_LIST = {
   mr: { grListTitle: "शासन निर्णय", searchPlaceholder: "शीर्षक, विभाग किंवा दिनांक शोधा",
         grCount: (n, all) => n === all ? `${all} GR` : `${n} / ${all} GR`, noMatch: "जुळणारे GR सापडले नाहीत.",
-        showMore: n => `आणखी ${n} दाखवा`, summarising: "सारांश तयार होत आहे…" },
+        showMore: n => `आणखी ${n} दाखवा`, summarising: "सारांश तयार होत आहे" },
   hi: { grListTitle: "शासन आदेश", searchPlaceholder: "शीर्षक, विभाग या तारीख खोजें",
         grCount: (n, all) => n === all ? `${all} आदेश` : `${n} / ${all} आदेश`, noMatch: "कोई मेल खाता आदेश नहीं मिला।",
-        showMore: n => `${n} और दिखाएँ`, summarising: "सारांश तैयार हो रहा है…" },
+        showMore: n => `${n} और दिखाएँ`, summarising: "सारांश तैयार हो रहा है" },
   or: { grListTitle: "ସରକାରୀ ସଂକଳ୍ପ", searchPlaceholder: "ଶୀର୍ଷକ, ବିଭାଗ କିମ୍ବା ତାରିଖ ଖୋଜନ୍ତୁ",
         grCount: (n, all) => n === all ? `${all} ଦଲିଲ` : `${n} / ${all} ଦଲିଲ`, noMatch: "କୌଣସି ମେଳ ଖାଉଥିବା ଦଲିଲ ମିଳିଲା ନାହିଁ।",
-        showMore: n => `ଆଉ ${n} ଦେଖାନ୍ତୁ`, summarising: "ସାରାଂଶ ପ୍ରସ୍ତୁତ ହେଉଛି…" },
+        showMore: n => `ଆଉ ${n} ଦେଖାନ୍ତୁ`, summarising: "ସାରାଂଶ ପ୍ରସ୍ତୁତ ହେଉଛି" },
   en: { grListTitle: "Government resolutions", searchPlaceholder: "Search title, department or date",
         grCount: (n, all) => n === all ? `${all} GRs` : `${n} of ${all} GRs`, noMatch: "No matching GRs.",
-        showMore: n => `Show ${n} more`, summarising: "Preparing summary…" },
+        showMore: n => `Show ${n} more`, summarising: "Preparing summary" },
 };
-for (const [lang, strings] of Object.entries(I18N_LIST)) Object.assign(I18N[lang], strings);
+const I18N_VIEW = {
+  mr: { pageOf: (n, all) => `पृष्ठ ${n} / ${all}`, retry: "पुन्हा प्रयत्न करा", fromDocument: "दस्तऐवजातील मजकूर" },
+  hi: { pageOf: (n, all) => `पृष्ठ ${n} / ${all}`, retry: "फिर कोशिश करें", fromDocument: "दस्तावेज़ का पाठ" },
+  or: { pageOf: (n, all) => `ପୃଷ୍ଠା ${n} / ${all}`, retry: "ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ", fromDocument: "ଦଲିଲର ପାଠ" },
+  en: { pageOf: (n, all) => `Page ${n} of ${all}`, retry: "Try again", fromDocument: "From the document" },
+};
+for (const [lang, strings] of Object.entries(I18N_LIST)) Object.assign(I18N[lang], strings, I18N_VIEW[lang]);
 
 const STATE_LANG = { MH: "mr", MP: "hi", OD: "or", UP: "mr" };
 const API = "/api/v1";
@@ -305,6 +311,7 @@ async function selectDocument(docId, { autoSummary = true } = {}) {
     ui.detail = detail;
     detail.passages.forEach(p => { ui.passages[p.passage_id] = p; });
     renderDocCard();
+    showPage(1);
     if (window.matchMedia("(max-width: 1100px)").matches) card.scrollIntoView({ behavior: "smooth", block: "start" });
     if (autoSummary) createSummary();
   } catch (err) {
@@ -425,14 +432,36 @@ function showSource(pid) {
   $("#source-body").innerHTML = `
     <div class="badges"><span class="badge">${esc(pageLabel(pid))}</span>
       <span class="badge ${p.origin === "reviewed" ? "ok" : ""}">${esc(s.origin[p.origin] || p.origin)}</span></div>
-    <div class="passage" data-testid="passage">${markUntrusted(p.text, p.untrusted || [])}</div>${legend}${img}`;
+    <div class="passage" data-testid="passage">${markUntrusted(p.text, p.untrusted || [])}</div>${legend}${p.page > 0 ? pageNav(p.page) : ""}${img}`;
   if (window.matchMedia("(max-width: 900px)").matches) $("#source-panel").scrollIntoView({ behavior: "smooth" });
 }
 
 document.addEventListener("click", e => {
   const btn = e.target.closest(".cite");
   if (btn) showSource(btn.dataset.pid);
+  const nav = e.target.closest("[data-page-nav]");
+  if (nav) showPage(Number(nav.dataset.pageNav));
 });
+
+function pageNav(n) {
+  const total = ui.detail ? ui.detail.pages.length : 0, s = t();
+  if (total <= 1) return "";
+  return `<div class="page-nav">
+    <button class="btn" data-page-nav="${n - 1}" ${n <= 1 ? "disabled" : ""} aria-label="previous">‹</button>
+    <span>${esc(s.pageOf(n, total))}</span>
+    <button class="btn" data-page-nav="${n + 1}" ${n >= total ? "disabled" : ""} aria-label="next">›</button></div>`;
+}
+
+function showPage(n) {
+  if (!ui.detail || !ui.doc) return;
+  const total = ui.detail.pages.length;
+  if (!total) { $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`; return; }
+  n = Math.min(Math.max(1, n), total);
+  $("#source-body").innerHTML = `<p class="hint">${esc(t().sourceHint)}</p>${pageNav(n)}
+    <img class="page-img" src="${API}/documents/${encodeURIComponent(ui.doc.id)}/pages/${n}.png"
+         alt="${esc(t().page(n))}" loading="lazy" data-testid="page-image"
+         onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'muted',textContent:'—'}))">`;
+}
 
 // -- summary -----------------------------------------------------------------
 
@@ -450,11 +479,22 @@ async function createSummary() {
     if (seq !== ui.seq || lang !== ui.lang) return;  // user moved on to another GR or language
     renderSummary(body);
   } catch (err) {
-    if (seq === ui.seq) box.innerHTML = `<p class="error" data-testid="summary-error">${esc(errorText(err))}</p>`;
+    if (seq === ui.seq) box.innerHTML = summaryFallback(err);
   } finally {
     btn.disabled = false;
   }
 }
+
+function summaryFallback(err) {
+  const s = t();
+  const excerpt = ui.detail ? ui.detail.passages.filter(p => p.page > 0 && p.text.trim()).slice(0, 3) : [];
+  return `<p class="error" data-testid="summary-error">${esc(errorText(err))}
+      <button type="button" class="btn retry" data-retry-summary>${esc(s.retry)}</button></p>`
+    + (excerpt.length ? `<div class="fallback"><h3>${esc(s.fromDocument)}</h3>${excerpt.map(p =>
+        `<p class="claim">${esc(p.text.length > 420 ? p.text.slice(0, 420) + "…" : p.text)}${citeButtons([p.passage_id])}</p>`).join("")}</div>` : "");
+}
+
+document.addEventListener("click", e => { if (e.target.closest("[data-retry-summary]")) createSummary(); });
 
 function renderSummary(body) {
   const s = t(), d = body.data;
@@ -748,14 +788,26 @@ $("#language").addEventListener("change", e => {
   renderList();
   syncUrl();
   $("#answer").innerHTML = "";
-  $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`;
-  if (ui.detail) { renderDocCard(); createSummary(); } else { $("#summary").innerHTML = ""; }
+  if (ui.detail) { renderDocCard(); showPage(1); createSummary(); }
+  else { $("#source-body").innerHTML = `<p class="muted">${esc(t().sourceHint)}</p>`; $("#summary").innerHTML = ""; }
 });
 $("#btn-summary").addEventListener("click", createSummary);
 $("#btn-top-upload").addEventListener("click", openUpload);
 $("#btn-list-upload").addEventListener("click", openUpload);
 $("#upload-close").addEventListener("click", () => $("#upload-dialog").close());
 $("#upload-dialog").addEventListener("click", e => { if (e.target.id === "upload-dialog") e.target.close(); });
+
+async function loadCounts() {
+  await Promise.all(["MH", "MP", "OD", "UP"].map(async st => {
+    try {
+      const n = (await api(`/documents?state=${st}`)).data.length;
+      const btn = document.querySelector(`.states button[data-state="${st}"]`);
+      btn.querySelector(".tab-count")?.remove();
+      btn.insertAdjacentHTML("beforeend", ` <span class="tab-count">${n}</span>`);
+    } catch { /* counts are decorative */ }
+  }));
+}
+loadCounts();
 
 const params = new URLSearchParams(location.search);
 const initialState = params.get("state") in STATE_LANG ? params.get("state") : "MH";

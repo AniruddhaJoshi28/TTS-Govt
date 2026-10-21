@@ -265,3 +265,15 @@ mark.unverified { background: none; color: var(--flag); text-decoration: underli
   .states { flex-wrap: nowrap; overflow-x: auto; padding: .75rem 1rem 0; scrollbar-width: none; }
   .states button { flex: 0 0 auto; padding: .5rem 1rem; }
 }
+
+/* -- page viewer, fallback, tab counts ------------------------------------------ */
+.page-nav { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: .5rem 0; font-size: .85rem; color: var(--muted); }
+.page-nav .btn { padding: .2rem .8rem; font-size: 1.1rem; line-height: 1; }
+.page-nav .btn:disabled { opacity: .35; cursor: default; }
+.page-img { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.retry { margin-left: .6rem; padding: .2rem .7rem; font-size: .85rem; vertical-align: middle; }
+.fallback { margin-top: .75rem; border-top: 1px dashed var(--line); padding-top: .5rem; }
+.fallback h3 { font-size: .9rem; color: var(--muted); margin: 0 0 .4rem; }
+.tab-count { font-size: .72rem; font-weight: 700; background: var(--bg); color: var(--muted);
+  border-radius: 999px; padding: .05rem .5rem; margin-left: .25rem; }
+.states button[aria-selected="true"] .tab-count { background: rgba(255,255,255,.2); color: #fff; }

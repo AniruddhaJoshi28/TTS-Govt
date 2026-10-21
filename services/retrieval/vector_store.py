@@ -24,6 +24,7 @@ import os
 import threading
 import uuid
 from collections.abc import Callable, Iterable
+from pathlib import Path
 
 from services.retrieval.bm25 import BM25Index, Hit
 
@@ -49,14 +50,36 @@ class FastEmbedder:
         self._lock = threading.Lock()
         self.e5 = "e5" in model.lower()
 
+    def _local_model_dir(self) -> str:
+        """Download the ONNX model as real files (no HF-cache symlinks) into a persistent directory.
+
+        Large models keep weights in a separate ``model.onnx_data`` file; recent onnxruntime refuses
+        to load external data reached through a symlink into another blob directory ("External data
+        path escapes model directory"), which is how the Hugging Face cache stores files.
+        """
+        from fastembed import TextEmbedding
+        from huggingface_hub import snapshot_download
+
+        spec = next(m for m in TextEmbedding.list_supported_models() if m["model"] == self.model_name)
+        root = Path(os.environ.get("EMBED_CACHE_DIR", Path.home() / ".cache" / "gr-embeddings"))
+        target = root / self.model_name.replace("/", "__")
+        files = [spec["model_file"], *spec.get("additional_files", [])]
+        if not all((target / f).is_file() for f in files):
+            snapshot_download(repo_id=spec["sources"]["hf"], local_dir=str(target))
+        return str(target)
+
     def _load(self):
         with self._lock:
             if self._model is None:
                 from fastembed import TextEmbedding
 
-                # EMBED_CUDA=1 uses the GPU (needs fastembed-gpu); CPU is fast enough for single queries.
+                # CPU unless EMBED_CUDA=1 (needs fastembed-gpu + matching CUDA/cuDNN). "auto" would try
+                # CUDA and log errors on hosts whose onnxruntime-gpu does not match the installed CUDA.
                 cuda = os.environ.get("EMBED_CUDA") == "1"
-                self._model = TextEmbedding(self.model_name, cuda=True) if cuda else TextEmbedding(self.model_name)
+                self._model = TextEmbedding(
+                    self.model_name, specific_model_path=self._local_model_dir(), cuda=cuda,
+                    providers=None if cuda else ["CPUExecutionProvider"],
+                    threads=int(os.environ.get("EMBED_THREADS", "0")) or None)
         return self._model
 
     @property
@@ -88,8 +111,10 @@ class VectorStore:
             return None
         from qdrant_client import QdrantClient
 
+        # Only the core REST API (collections, upsert, query_points, scroll) is used, which is stable
+        # across 1.x; skip the strict client/server minor-version check (server here is 1.14).
         client = QdrantClient(url=url, api_key=os.environ.get("QDRANT_API_KEY") or None, timeout=30,
-                              port=None if url.startswith("http") else 6333)
+                              port=None if url.startswith("http") else 6333, check_compatibility=False)
         return cls(client, FastEmbedder(os.environ.get("EMBED_MODEL", DEFAULT_MODEL)),
                    prefix=os.environ.get("QDRANT_COLLECTION_PREFIX", "GOVT_"),
                    min_score=float(os.environ.get("VECTOR_MIN_SCORE", "0.80")))

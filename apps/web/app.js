@@ -776,6 +776,140 @@ if (dropZone && fileInput) {
   });
 }
 
+// -- system panel: model services + ingestion workflow (DAG) -------------------
+
+const I18N_SYS = {
+  mr: { systemBtn: "प्रणाली", systemTitle: "प्रणाली स्थिती", servicesTitle: "मॉडेल सेवा", corpusTitle: "दस्तऐवज",
+        workflowTitle: "संकलन कार्यप्रवाह", runWarm: "अनुक्रमणिका + सारांश", runFull: "आत्ता संकलन करा",
+        historyTitle: "अलीकडील रन", running: "चालू आहे", noRuns: "अद्याप रन नाही.", started: "सुरू केले",
+        busy: "कार्यप्रवाह आधीच चालू आहे." },
+  hi: { systemBtn: "सिस्टम", systemTitle: "सिस्टम स्थिति", servicesTitle: "मॉडल सेवाएँ", corpusTitle: "दस्तावेज़",
+        workflowTitle: "संग्रह कार्यप्रवाह", runWarm: "इंडेक्स + सारांश", runFull: "अभी संग्रह करें",
+        historyTitle: "हाल के रन", running: "चल रहा है", noRuns: "अभी कोई रन नहीं।", started: "शुरू किया",
+        busy: "कार्यप्रवाह पहले से चल रहा है।" },
+  or: { systemBtn: "ସିଷ୍ଟମ", systemTitle: "ସିଷ୍ଟମ ସ୍ଥିତି", servicesTitle: "ମଡେଲ ସେବା", corpusTitle: "ଦଲିଲ",
+        workflowTitle: "ସଂଗ୍ରହ କାର୍ଯ୍ୟପ୍ରବାହ", runWarm: "ଇଣ୍ଡେକ୍ସ + ସାରାଂଶ", runFull: "ବର୍ତ୍ତମାନ ସଂଗ୍ରହ କରନ୍ତୁ",
+        historyTitle: "ସାମ୍ପ୍ରତିକ ରନ", running: "ଚାଲୁଛି", noRuns: "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ରନ ନାହିଁ।", started: "ଆରମ୍ଭ ହେଲା",
+        busy: "କାର୍ଯ୍ୟପ୍ରବାହ ପୂର୍ବରୁ ଚାଲୁଛି।" },
+  en: { systemBtn: "System", systemTitle: "System status", servicesTitle: "Model services", corpusTitle: "Documents",
+        workflowTitle: "Ingestion workflow", runWarm: "Index + summarise", runFull: "Crawl now",
+        historyTitle: "Recent runs", running: "running", noRuns: "No runs yet.", started: "Started",
+        busy: "A workflow is already running." },
+};
+for (const [lang, strings] of Object.entries(I18N_SYS)) Object.assign(I18N[lang], strings);
+
+const STATUS_CLASS = { ok: "ok", succeeded: "ok", running: "run", starting: "run", syncing: "run", pending: "idle",
+  skipped: "idle", not_configured: "idle", partial: "warn", degraded: "warn", unavailable: "bad", failed: "bad" };
+const dot = st => `<span class="dot dot-${STATUS_CLASS[st] || "unknown"}" aria-hidden="true"></span>`;
+let sysTimer = null;
+
+function fmtDetail(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  return Object.entries(v).map(([k, x]) => `${k}: ${typeof x === "object" ? JSON.stringify(x) : x}`).join(" · ");
+}
+
+function nodeResult(n) {
+  if (n.error) return n.error;
+  const r = n.result;
+  if (r == null) return "";
+  if (typeof r === "string") return r;
+  const keys = ["imported", "already_present", "failed", "indexed", "up_to_date", "documents", "done", "total", "sources", "workers"];
+  return keys.filter(k => k in r).map(k => `${k} ${r[k]}`).join(" · ");
+}
+
+function renderDag(run, workflows) {
+  const box = $("#sys-dag"), s = t();
+  const nodes = run ? run.nodes : (workflows.full || []).map(n => ({ ...n, status: "pending" }));
+  // Columns by dependency depth: crawl | import | reload | index + summarise.
+  const depth = {};
+  const byName = Object.fromEntries(nodes.map(n => [n.name, n]));
+  const d = n => depth[n.name] ?? (depth[n.name] = (n.deps || []).length ? 1 + Math.max(...n.deps.map(x => d(byName[x] || { name: x, deps: [] }))) : 0);
+  nodes.forEach(d);
+  const cols = [];
+  nodes.forEach(n => (cols[depth[n.name]] = cols[depth[n.name]] || []).push(n));
+  box.innerHTML = (run ? `<p class="hint">${esc(run.dag)} · ${esc(run.trigger)} · ${esc(fmtDate(run.started_at))} ${run.status === "running" ? "· " + esc(s.running) : ""}</p>` : "")
+    + `<div class="dag-cols">${cols.map(col => `<div class="dag-col">${col.map(n => `
+      <div class="dag-node st-${STATUS_CLASS[n.status] || "idle"}" data-testid="dag-node" title="${esc(n.description || "")}">
+        <div class="dag-name">${dot(n.status)} ${esc(n.name)}</div>
+        <div class="dag-meta">${esc(n.status)}${n.duration_s != null ? ` · ${n.duration_s}s` : ""}${n.attempts > 1 ? ` · ×${n.attempts}` : ""}</div>
+        <div class="dag-result">${esc(nodeResult(n))}</div></div>`).join("")}</div>`).join("")}</div>`;
+}
+
+function renderSystem(data) {
+  const s = t(), svc = data.services;
+  const rows = [["slm", "SLM"], ["tts", "TTS"], ["stt", "STT"], ["qdrant", "Qdrant"]].map(([k, label]) => {
+    const v = svc[k] || {};
+    return `<div class="sys-svc">${dot(v.status)}<div><strong>${label}</strong> <span class="muted">${esc(v.status || "unknown")}</span>
+      <div class="sys-detail">${esc(fmtDetail(v.detail))}</div></div></div>`;
+  });
+  $("#sys-services").innerHTML = rows.join("");
+  $("#sys-corpus").innerHTML = Object.entries(data.corpus.by_state).filter(([, n]) => n)
+    .map(([st, n]) => `<span class="badge">${esc(st)} · ${n}</span>`).join("") + ` <span class="muted">= ${data.corpus.documents}</span>`;
+  const p = data.pipeline;
+  if (p) {
+    renderDag(p.current || p.history[0] || null, p.workflows);
+    $("#sys-history").innerHTML = p.history.length ? p.history.map(r => `<li>${dot(r.status)} ${esc(r.dag)} · ${esc(r.status)} · ${esc(r.trigger)} · ${esc(fmtDate(r.started_at))}</li>`).join("")
+      : `<li class="muted">${esc(s.noRuns)}</li>`;
+    document.querySelectorAll("[data-run]").forEach(b => { b.disabled = p.running; });
+  }
+}
+
+// When a workflow that reloaded the corpus finishes, show the new GRs without disturbing the reader.
+let lastRunSeen = null;
+async function refreshAfterRun(p) {
+  const last = p && p.history && p.history[0];
+  if (!last || last.id === lastRunSeen) return;
+  const first = lastRunSeen === null;
+  lastRunSeen = last.id;
+  const reloaded = last.nodes.some(n => n.name === "reload" && n.status === "succeeded");
+  if (first || !reloaded) return;
+  loadCounts();
+  try {
+    ui.docs = (await api(`/documents?state=${ui.state}`)).data;
+    renderList();
+  } catch { /* the list refreshes on the next state change */ }
+}
+
+async function refreshSystem() {
+  try {
+    const data = (await api("/system")).data;
+    const states = Object.values(data.services).map(v => v && v.status);
+    const worst = states.includes("unavailable") ? "bad" : states.some(x => ["starting", "syncing"].includes(x)) ? "run" : "ok";
+    $("#system-dot").className = `dot dot-${worst}`;
+    if ($("#system-dialog").open) renderSystem(data);
+    await refreshAfterRun(data.pipeline);
+    return data;
+  } catch { $("#system-dot").className = "dot dot-bad"; return null; }
+}
+
+function openSystem() {
+  const dlg = $("#system-dialog");
+  if (!dlg.open) dlg.showModal();
+  refreshSystem();
+  clearInterval(sysTimer);
+  sysTimer = setInterval(() => { if (dlg.open) refreshSystem(); else clearInterval(sysTimer); }, 3000);
+}
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-run]");
+  if (!b) return;
+  b.disabled = true;
+  try {
+    const r = (await api(`/pipeline/run?workflow=${b.dataset.run}`, { method: "POST" })).data;
+    $("#sys-run-msg").textContent = `${t().started}: ${r.workflow} (${r.run_id})`;
+  } catch (err) {
+    $("#sys-run-msg").textContent = err.code === "pipeline_busy" ? t().busy : errorText(err);
+  }
+  refreshSystem();
+});
+
+$("#btn-system").addEventListener("click", openSystem);
+$("#system-close").addEventListener("click", () => $("#system-dialog").close());
+$("#system-dialog").addEventListener("click", e => { if (e.target.id === "system-dialog") e.target.close(); });
+refreshSystem();
+setInterval(refreshSystem, 20000);
+
 // -- wiring ------------------------------------------------------------------
 
 function openUpload() {

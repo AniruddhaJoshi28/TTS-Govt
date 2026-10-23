@@ -59,3 +59,6 @@ data/demo/questions/
 # government-gr-platform: source package and env template (not ML models / secrets)
 !government-gr-platform/core/models/
 !government-gr-platform/.env.example
+
+# workflow run history (runtime data)
+data/pipeline/

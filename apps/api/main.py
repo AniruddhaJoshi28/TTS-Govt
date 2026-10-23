@@ -71,6 +71,8 @@ from services.document_ingestion.manifest import DocumentEntry
 from services.pdf_ocr.extract import extract_pages
 from services.retrieval.bm25 import BM25Index, Passage
 from services.retrieval.vector_store import HybridIndex, VectorStore, sync_corpus
+from apps.api.pipeline import Pipeline
+from apps.api.supervisor import RemoteSpeech, Supervisor
 from services.slm_orchestrator.answer import answer
 from services.slm_orchestrator.llm import LLMConfig, LLMUnavailable, OpenAICompatibleLLM
 from services.slm_orchestrator.summarise import summarise
@@ -110,6 +112,19 @@ def _load_dotenv_if_present() -> None:
         pass
 
 
+def _use_recorded_model_port() -> None:
+    """run_all.sh moves vLLM off ports held by other users and records the port in logs/vllm.port.
+    Prefer it over the static LLM_BASE_URL in .env, so an app started by hand (plain uvicorn) still
+    reaches the model. An LLM_BASE_URL exported in the shell always wins."""
+    port_file = ROOT / "logs" / "vllm.port"
+    if "LLM_BASE_URL" in os.environ or not port_file.is_file():
+        return
+    port = port_file.read_text(encoding="utf-8").strip()
+    if port.isdigit():
+        os.environ["LLM_BASE_URL"] = f"http://127.0.0.1:{port}/v1"
+
+
+_use_recorded_model_port()
 _load_dotenv_if_present()
 
 
@@ -140,10 +155,10 @@ class Runtime:
         self._index_pool = ThreadPoolExecutor(max_workers=1)  # serialises Qdrant indexing
         self.reload()
 
-    def reload(self) -> None:
+    def reload(self, index: bool = True) -> None:
         self.corpus = load_corpus(self.corpus_dir) if self.corpus_dir.exists() else {}
         self.indexes = {doc_id: BM25Index(doc.to_passages()) for doc_id, doc in self.corpus.items()}
-        if self.vectors is not None:
+        if self.vectors is not None and index:
             # Index in the background: startup and /reload never wait on embeddings.
             self.vector_status = {"status": "syncing", "detail": f"{len(self.corpus)} documents"}
             self._index_pool.submit(self._sync_vectors, list(self.corpus.values()))
@@ -186,8 +201,15 @@ rt = Runtime()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    rt.load_speech()
+    # Brings up the SLM (vLLM) and the speech service as separate processes (or loads speech
+    # in-process when supervision is off). Non-blocking: the web app serves while models load.
+    rt.supervisor = Supervisor(rt, _log_print)
+    rt.supervisor.start()
+    rt.pipeline = Pipeline(rt, generate_summary, _log_print)
+    rt.pipeline.start_scheduler()
     yield
+    rt.pipeline.stop()
+    rt.supervisor.stop()
 
 
 app = FastAPI(title="Government GR Assistant API", version="0.2.0", lifespan=lifespan)
@@ -290,9 +312,23 @@ class Health(BaseModel):
     dependencies: list[DependencyStatus]
 
 
+def _supervised(name: str) -> dict:
+    sup = getattr(rt, "supervisor", None)
+    return sup.status.get(name, {}) if sup is not None and sup.enabled else {}
+
+
+def _speech_dep(name: str, engine, error: str | None) -> DependencyStatus:
+    if engine is not None:
+        return DependencyStatus(name=name, status="ok", detail=_supervised("speech").get("detail"))
+    if _supervised("speech").get("status") == "starting":
+        return DependencyStatus(name=name, status="starting", detail="speech service is loading models")
+    return DependencyStatus(name=name, status="unavailable" if error else "not_configured", detail=error)
+
+
 def _llm_status() -> DependencyStatus:
     if rt.llm is None:
-        return DependencyStatus(name="slm", status="not_configured")
+        sup = _supervised("slm")
+        return DependencyStatus(name="slm", status=sup.get("status", "not_configured"), detail=sup.get("detail"))
     import requests
     try:
         resp = requests.get(f"{rt.llm.config.base_url}/models", timeout=5)
@@ -327,10 +363,8 @@ def health(request: Request) -> Envelope[Health]:
         DependencyStatus(name="qdrant", status={"syncing": "ok", "degraded": "unavailable"}.get(
             rt.vector_status["status"], rt.vector_status["status"]),
             detail=str(rt.vector_status.get("detail")) if rt.vector_status.get("detail") is not None else None),
-        DependencyStatus(name="tts", status="ok" if rt.tts else ("unavailable" if rt.tts_error else "not_configured"),
-                         detail=rt.tts_error),
-        DependencyStatus(name="stt", status="ok" if rt.stt else ("unavailable" if rt.stt_error else "not_configured"),
-                         detail=rt.stt_error),
+        _speech_dep("tts", rt.tts, rt.tts_error),
+        _speech_dep("stt", rt.stt, rt.stt_error),
     ]
     overall = "ok" if all(d.status == "ok" for d in deps) else "degraded"
     return Envelope[Health](request_id=request.state.request_id, language=Language.ENGLISH,
@@ -455,29 +489,29 @@ class SummaryRequest(BaseModel):
     language: Language
 
 
-@app.post(f"{API_PREFIX}/summaries", response_model=Envelope[SummaryOut], dependencies=[Depends(require_key)])
-def create_summary(request: Request, body: SummaryRequest, refresh: bool = False):
-    doc = _doc(body.document_id)
-    llm = _require_llm()
+def summary_cache_path(doc: CorpusDocument, language: Language, model: str) -> Path:
     key = hashlib.sha256(
-        f"{GENERATION_PIPELINE_VERSION}|{doc.sha256}|{body.language.value}|{llm.model}|{len(doc.passages)}".encode()
+        f"{GENERATION_PIPELINE_VERSION}|{doc.sha256}|{language.value}|{model}|{len(doc.passages)}".encode()
     ).hexdigest()[:24]
-    cache = CACHE_DIR / "summaries" / f"{key}.json"
+    return CACHE_DIR / "summaries" / f"{key}.json"
+
+
+def generate_summary(doc: CorpusDocument, language: Language, llm, request_id: str = "",
+                     refresh: bool = False) -> tuple[dict, bool]:
+    """Summary envelope for a GR in a language, from cache or generated. Returns (envelope, cache_hit).
+
+    Shared by the /summaries endpoint and the pre-summarising agent farm, so both produce and
+    reuse exactly the same cached result."""
+    cache = summary_cache_path(doc, language, llm.model)
     cached = _read_cache(cache) if cache.exists() and not refresh else None
     if cached is not None:
-        _log_print(f"📦 [CACHE HIT] Returning cached summary for doc='{doc.entry.id}' ({body.language.value})")
-        return JSONResponse({**cached, "request_id": request.state.request_id})
-
-    _log_print(f"\n🚀 [API REQUEST: /summaries] Generating fresh summary for doc='{doc.entry.id}'...")
+        return cached, True
     passages = doc.to_passages()
     if not passages:
-        raise ApiError(
-            422,
-            "document_not_searchable",
-            "This document has no readable passages. Configure OCR and upload it again before generating a summary.",
-        )
+        raise ApiError(422, "document_not_searchable",
+                       "This document has no readable passages. Configure OCR and upload it again before generating a summary.")
     try:
-        result = summarise(passages, body.language, llm)
+        result = summarise(passages, language, llm)
     except LLMUnavailable as exc:
         raise ApiError(503, "model_unavailable", str(exc), retryable=True) from exc
     out = SummaryOut(
@@ -487,13 +521,25 @@ def create_summary(request: Request, body: SummaryRequest, refresh: bool = False
                   for s in result.sections],
     )
     env = Envelope[SummaryOut](
-        request_id=request.state.request_id, language=body.language, data=out,
+        request_id=request_id, language=language, data=out,
         sources=[_source(p) for p in result.sources],
         uncertainties=[Uncertainty(code="model_note", message=u) for u in result.uncertainties],
     )
     if result.status == "summarised":
         _write_cache(cache, env.model_dump_json())
-    return env
+    return json.loads(env.model_dump_json()), False
+
+
+@app.post(f"{API_PREFIX}/summaries", response_model=Envelope[SummaryOut], dependencies=[Depends(require_key)])
+def create_summary(request: Request, body: SummaryRequest, refresh: bool = False):
+    doc = _doc(body.document_id)
+    llm = _require_llm()
+    if refresh or not summary_cache_path(doc, body.language, llm.model).exists():
+        _log_print(f"\n🚀 [API REQUEST: /summaries] Generating fresh summary for doc='{doc.entry.id}'...")
+    env, hit = generate_summary(doc, body.language, llm, request.state.request_id, refresh)
+    if hit:
+        _log_print(f"📦 [CACHE HIT] Returning cached summary for doc='{doc.entry.id}' ({body.language.value})")
+    return JSONResponse({**env, "request_id": request.state.request_id})
 
 
 class QaRequest(BaseModel):
@@ -585,7 +631,10 @@ def _run_synthesis(job_id: str, req: SynthesisRequest) -> None:
     job["status"] = "running"
     _log_print(f"🔊 [TTS SYNTHESIS] Generating audio in {req.language.value} ({len(req.text):,} chars)...")
     try:
-        result = synthesize(req.text, req.language.value, rt.tts, req.speaker)
+        if isinstance(rt.tts, RemoteSpeech):
+            result = rt.tts.synthesize(req.text, req.language.value, req.speaker)
+        else:
+            result = synthesize(req.text, req.language.value, rt.tts, req.speaker)
     except AudioQualityError as exc:
         _log_print(f"❌ [TTS ERROR] Quality error: {exc}")
         job.update(status="failed", error=str(exc))
@@ -656,7 +705,7 @@ async def create_transcription(request: Request, language: Language):
     if len(data) > MAX_AUDIO_BYTES:
         raise ApiError(413, "audio_too_large", "The recording is too large.")
     try:
-        t = transcribe(data, language.value, rt.stt)
+        t = rt.stt.transcribe(data, language.value) if isinstance(rt.stt, RemoteSpeech) else transcribe(data, language.value, rt.stt)
     except AudioRejected as exc:
         raise ApiError(422, "audio_rejected", str(exc)) from exc
     return Envelope[TranscriptOut](request_id=request.state.request_id, language=language,
@@ -925,6 +974,42 @@ def reload_corpus(request: Request):
         language=Language.ENGLISH,
         data={"documents": len(rt.corpus), "reloaded": True},
     )
+
+
+# -- system status and workflows ---------------------------------------------
+
+@app.get(f"{API_PREFIX}/system")
+def system_status(request: Request):
+    """Live view for the UI: model services, vector index, and the ingestion workflows."""
+    sup = getattr(rt, "supervisor", None)
+    pipe = getattr(rt, "pipeline", None)
+    data = {
+        "services": {
+            "slm": _llm_status().model_dump(),
+            "speech": sup.status.get("speech") if sup is not None and sup.enabled else
+                      {"status": "ok" if rt.tts else "not_configured", "detail": "in-process"},
+            "tts": _speech_dep("tts", rt.tts, rt.tts_error).model_dump(),
+            "stt": _speech_dep("stt", rt.stt, rt.stt_error).model_dump(),
+            "qdrant": rt.vector_status,
+        },
+        "supervisor": bool(sup and sup.enabled),
+        "corpus": {"documents": len(rt.corpus),
+                   "by_state": {s.value: sum(1 for d in rt.corpus.values() if d.entry.state == s) for s in State}},
+        "pipeline": pipe.snapshot() if pipe is not None else None,
+    }
+    return Envelope[dict](request_id=request.state.request_id, language=Language.ENGLISH, data=data)
+
+
+@app.post(f"{API_PREFIX}/pipeline/run", status_code=202, dependencies=[Depends(require_key)])
+def pipeline_run(request: Request, workflow: str = Query(default="full", pattern="^(full|warm)$")):
+    pipe = getattr(rt, "pipeline", None)
+    if pipe is None:
+        raise ApiError(503, "pipeline_unavailable", "The workflow engine is not running.")
+    run = pipe.start(workflow, trigger="manual")
+    if run is None:
+        raise ApiError(409, "pipeline_busy", "A workflow is already running.", retryable=True)
+    return Envelope[dict](request_id=request.state.request_id, language=Language.ENGLISH,
+                          data={"run_id": run.id, "workflow": workflow, "status": run.status})
 
 
 # -- web UI ------------------------------------------------------------------

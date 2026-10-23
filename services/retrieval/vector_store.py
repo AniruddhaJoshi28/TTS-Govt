@@ -1,4 +1,4 @@
-"""Qdrant vector index: one collection per state (GOVT_MH, GOVT_MP, GOVT_OD, GOVT_UP).
+"""Qdrant vector index: one collection per state and language (GOVT_MH_mr, GOVT_MH_en, GOVT_OD_or, ...).
 
 Each point is one citable passage. The payload carries the passage text plus the GR's metadata
 (title, department, date, number, official URL, language, version), so the collection is a
@@ -23,6 +23,8 @@ import logging
 import os
 import threading
 import uuid
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
@@ -103,6 +105,8 @@ class VectorStore:
         self.m = models
         self._ready: set[str] = set()
         self._dim: int | None = None
+        self._qcache: OrderedDict[str, list[float]] = OrderedDict()
+        self._cache_lock = threading.Lock()
 
     @classmethod
     def from_env(cls) -> VectorStore | None:
@@ -119,11 +123,19 @@ class VectorStore:
                    prefix=os.environ.get("QDRANT_COLLECTION_PREFIX", "GOVT_"),
                    min_score=float(os.environ.get("VECTOR_MIN_SCORE", "0.80")))
 
-    def collection(self, state: str) -> str:
-        return f"{self.prefix}{state}"
+    # -- collections: one per state AND language, e.g. GOVT_MH_mr, GOVT_MH_en ----------------
+    def collection(self, state: str, language: str) -> str:
+        return f"{self.prefix}{state}_{language}"
 
-    def ensure(self, state: str) -> str:
-        name = self.collection(state)
+    def state_collections(self, state: str) -> list[str]:
+        """Existing collections of a state (any language). Older per-state collections are ignored."""
+        stem = f"{self.prefix}{state}_"
+        names = {c.name for c in self.client.get_collections().collections if c.name.startswith(stem)}
+        self._ready |= names
+        return sorted(names)
+
+    def ensure(self, state: str, language: str) -> str:
+        name = self.collection(state, language)
         if name in self._ready:
             return name
         if not self.client.collection_exists(name):
@@ -132,62 +144,115 @@ class VectorStore:
             self.client.create_collection(name, vectors_config=self.m.VectorParams(size=self._dim, distance=self.m.Distance.COSINE))
             for field, schema in (("document_id", self.m.PayloadSchemaType.KEYWORD),
                                   ("version_id", self.m.PayloadSchemaType.KEYWORD),
-                                  ("language", self.m.PayloadSchemaType.KEYWORD),
                                   ("issued", self.m.PayloadSchemaType.KEYWORD)):
                 self.client.create_payload_index(name, field, field_schema=schema)
         self._ready.add(name)
         return name
 
+    def _doc_filter(self, document_id: str):
+        return self.m.Filter(must=[self.m.FieldCondition(key="document_id", match=self.m.MatchValue(value=document_id))])
+
     def indexed_versions(self, state: str) -> dict[str, str]:
-        """document_id -> version_id currently stored for a state."""
-        name = self.ensure(state)
+        """document_id -> version_id currently stored for a state (across its language collections)."""
         found: dict[str, str] = {}
-        offset = None
-        while True:
-            points, offset = self.client.scroll(name, limit=1000, offset=offset, with_vectors=False,
-                                                with_payload=["document_id", "version_id"])
-            for p in points:
-                found[p.payload["document_id"]] = p.payload["version_id"]
-            if offset is None:
-                return found
+        for name in self.state_collections(state):
+            offset = None
+            while True:
+                points, offset = self.client.scroll(name, limit=1000, offset=offset, with_vectors=False,
+                                                    with_payload=["document_id", "version_id"])
+                for pt in points:
+                    found[pt.payload["document_id"]] = pt.payload["version_id"]
+                if offset is None:
+                    break
+        return found
+
+    def delete_document(self, state: str, document_id: str) -> None:
+        for name in self.state_collections(state):
+            self.client.delete(name, wait=True, points_selector=self.m.FilterSelector(filter=self._doc_filter(document_id)))
 
     def index_document(self, doc) -> int:
-        """Replace all points of ``doc`` (a CorpusDocument) with its current passages."""
+        """Replace all points of ``doc`` (a CorpusDocument) with its current passages, each stored in
+        the collection of its own language (detected from its script)."""
         e = doc.entry
-        name = self.ensure(e.state.value)
-        doc_filter = self.m.Filter(must=[self.m.FieldCondition(key="document_id", match=self.m.MatchValue(value=e.id))])
-        self.client.delete(name, points_selector=self.m.FilterSelector(filter=doc_filter), wait=True)
+        state = e.state.value
+        self.delete_document(state, e.id)
         passages = [p for p in doc.passages if p["text"].strip()]
-        meta = {"state": e.state.value, "language": e.language.value, "title": e.title, "title_en": e.title_en,
+        meta = {"state": state, "document_language": e.language.value, "title": e.title, "title_en": e.title_en,
                 "department": e.department, "document_type": e.document_type, "issued": e.issued.isoformat(),
                 "url": str(e.url), "listing_url": str(e.listing_url), "sha256": doc.sha256,
                 **{f"meta_{k}": v for k, v in e.portal_metadata.items()}}
-        for i in range(0, len(passages), BATCH):
-            batch = passages[i:i + BATCH]
-            vectors = self.embedder.embed_passages([p["text"] for p in batch])
-            self.client.upsert(name, wait=True, points=[
-                self.m.PointStruct(id=point_id(p["passage_id"]), vector=v, payload={
-                    **meta, "document_id": e.id, "version_id": p["version_id"], "passage_id": p["passage_id"],
-                    "page": p["page"], "origin": p["origin"], "text": p["text"],
-                    "untrusted": [list(s) for s in p["untrusted"]]})
-                for p, v in zip(batch, vectors)])
+        by_lang: dict[str, list[dict]] = {}
+        for p in passages:
+            by_lang.setdefault(passage_language(p["text"], e.language.value), []).append(p)
+        for lang, items in by_lang.items():
+            name = self.ensure(state, lang)
+            for i in range(0, len(items), BATCH):
+                batch = items[i:i + BATCH]
+                vectors = self.embedder.embed_passages([p["text"] for p in batch])
+                self.client.upsert(name, wait=True, points=[
+                    self.m.PointStruct(id=point_id(p["passage_id"]), vector=v, payload={
+                        **meta, "language": lang, "document_id": e.id, "version_id": p["version_id"],
+                        "passage_id": p["passage_id"], "page": p["page"], "origin": p["origin"], "text": p["text"],
+                        "untrusted": [list(s) for s in p["untrusted"]]})
+                    for p, v in zip(batch, vectors)])
         return len(passages)
 
-    def delete_document(self, state: str, document_id: str) -> None:
-        name = self.ensure(state)
-        self.client.delete(name, wait=True, points_selector=self.m.FilterSelector(filter=self.m.Filter(
-            must=[self.m.FieldCondition(key="document_id", match=self.m.MatchValue(value=document_id))])))
+    def query_vector(self, query: str) -> list[float]:
+        """Embedding of a question, cached (repeat and suggested questions skip the model)."""
+        key = " ".join(query.split()).lower()
+        with self._cache_lock:
+            if key in self._qcache:
+                self._qcache.move_to_end(key)
+                return self._qcache[key]
+        vec = self.embedder.embed_queries([query])[0]
+        with self._cache_lock:
+            self._qcache[key] = vec
+            while len(self._qcache) > 2048:
+                self._qcache.popitem(last=False)
+        return vec
 
     def search(self, query: str, state: str, k: int = 10, document_id: str | None = None) -> list[tuple[str, float]]:
-        """(passage_id, cosine score) pairs above ``min_score``."""
-        name = self.ensure(state)
-        flt = None
-        if document_id:
-            flt = self.m.Filter(must=[self.m.FieldCondition(key="document_id", match=self.m.MatchValue(value=document_id))])
-        vector = self.embedder.embed_queries([query])[0]
-        res = self.client.query_points(name, query=vector, limit=k, query_filter=flt, with_payload=["passage_id"],
-                                       score_threshold=self.min_score)
-        return [(p.payload["passage_id"], p.score) for p in res.points]
+        """(passage_id, cosine score) above ``min_score``, from all of the state's language collections
+        searched in parallel (the embedding model is multilingual, so any question language works)."""
+        names = self.state_collections(state)
+        if not names:
+            return []
+        vector = self.query_vector(query)
+        flt = self._doc_filter(document_id) if document_id else None
+
+        def one(name):
+            return self.client.query_points(name, query=vector, limit=k, query_filter=flt,
+                                            with_payload=["passage_id"], score_threshold=self.min_score).points
+
+        with ThreadPoolExecutor(max_workers=min(4, len(names))) as pool:
+            points = [pt for pts in pool.map(one, names) for pt in pts]
+        points.sort(key=lambda pt: pt.score, reverse=True)
+        return [(pt.payload["passage_id"], pt.score) for pt in points[:k]]
+
+
+_SCRIPT_RANGES = {"devanagari": (0x0900, 0x097F), "odia": (0x0B00, 0x0B7F)}
+
+
+def passage_language(text: str, document_language: str) -> str:
+    """Language of one passage from its script. Devanagari is Marathi or Hindi: the document's own
+    language decides (both share the script). Latin-script passages (annexures, tables) are English."""
+    counts = {"devanagari": 0, "odia": 0, "latin": 0}
+    for ch in text:
+        cp = ord(ch)
+        if _SCRIPT_RANGES["devanagari"][0] <= cp <= _SCRIPT_RANGES["devanagari"][1]:
+            counts["devanagari"] += 1
+        elif _SCRIPT_RANGES["odia"][0] <= cp <= _SCRIPT_RANGES["odia"][1]:
+            counts["odia"] += 1
+        elif ch.isascii() and ch.isalpha():
+            counts["latin"] += 1
+    script, n = max(counts.items(), key=lambda kv: kv[1])
+    if n == 0:
+        return document_language
+    if script == "odia":
+        return "or"
+    if script == "latin":
+        return "en"
+    return document_language if document_language in ("mr", "hi") else "hi"
 
 
 class HybridIndex:

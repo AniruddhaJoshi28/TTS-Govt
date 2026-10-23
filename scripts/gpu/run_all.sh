@@ -31,57 +31,20 @@ wait_for() {  # url, seconds, name, logfile
 
 port_free() { "$VENV_APP/bin/python" -c 'import socket,sys; s=socket.socket(); s.bind(("127.0.0.1", int(sys.argv[1])))' "$1" 2>/dev/null; }
 next_free_port() { local p; for p in $(seq "$1" $(($1 + 100))); do port_free "$p" && { echo "$p"; return; }; done; return 1; }
-# A previous run may have moved the model server off a busy port; look there first.
-if [[ -f "$LOGS/vllm.port" ]]; then
-  export LLM_PORT="$(cat "$LOGS/vllm.port")" LLM_BASE_URL="http://127.0.0.1:$(cat "$LOGS/vllm.port")/v1"
-fi
-
-served_model() {  # the model id the running vLLM serves, or nothing
-  curl -fsS "$LLM_BASE_URL/models" 2>/dev/null \
-    | "$VENV_APP/bin/python" -c 'import json, sys; print(json.load(sys.stdin)["data"][0]["id"])' 2>/dev/null
-}
-
-RUNNING_MODEL="$(served_model || true)"
-if [[ -n "$RUNNING_MODEL" ]]; then
-  # A previous run's vLLM is still up. Its own memory shows as "used" in nvidia-smi, so the
-  # free-memory plan is meaningless now: reuse the server and the model it actually serves.
-  step "Model server already running: $RUNNING_MODEL"
-  if [[ "$RUNNING_MODEL" != "$LLM_MODEL" ]]; then
-    echo "using the running model $RUNNING_MODEL (a fresh start would have chosen $LLM_MODEL)"
-  fi
-  export LLM_MODEL="$RUNNING_MODEL"
-  echo "Speech will run on GPU $APP_GPUS. To re-plan from scratch: bash scripts/gpu/stop_all.sh, then run this again."
-else
-  step "Checking GPU memory"
-  show_gpu_plan
-  if (( LLM_FREE_MB < 10000 )) && [[ -z "${GPU_MEM_OVERRIDE:-}" ]]; then
-    echo "Not enough free GPU memory for the model right now (other jobs are using the GPUs)." >&2
-    echo "Check with: nvidia-smi. Retry when memory frees up, or force a choice in .env:" >&2
-    echo "  GPU_MEM_OVERRIDE=1  LLM_GPUS=<index>  GPU_MEM=<fraction>  LLM_MODEL=Qwen/Qwen3-4B" >&2
-    exit 1
-  fi
-
-  # On a shared server another user's service may already hold the model port. Move to the next
-  # free port and point the app at it (this script starts the app with the same environment).
-  if ! port_free "$LLM_PORT"; then
-    p="$(next_free_port $((LLM_PORT + 1)))" || { echo "no free port near $LLM_PORT" >&2; exit 1; }
-    echo "port $LLM_PORT is used by another process; using $p for the model server"
-    export LLM_PORT="$p" LLM_BASE_URL="http://127.0.0.1:$p/v1"
-  fi
-  echo "$LLM_PORT" >"$LOGS/vllm.port"
-
-  step "Starting the model server: $LLM_MODEL (GPU $LLM_GPUS)"
-  nohup "${VLLM_ENV[@]}" CUDA_VISIBLE_DEVICES="$LLM_GPUS" "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
-    --dtype bfloat16 --max-model-len "$MAX_MODEL_LEN" --gpu-memory-utilization "$GPU_MEM" \
-    --served-model-name "$LLM_MODEL" >"$LOGS/vllm.log" 2>&1 &
-  echo $! >"$LOGS/vllm.pid"
-  wait_for "$LLM_BASE_URL/models" 1800 vllm "$LOGS/vllm.log"
-fi
+step "Model server (SLM)"
+show_gpu_plan
+# One launcher for vLLM (also used by the app's supervisor): reuses a running server, otherwise
+# starts one on a free port with the free-memory plan from env.sh.
+SLM_OUT="$(bash "$(dirname "$0")/start_slm.sh")" || exit 1
+read -r SLM_STATE LLM_PORT SLM_MODEL <<<"$SLM_OUT"
+export LLM_PORT LLM_BASE_URL="http://127.0.0.1:$LLM_PORT/v1"
+echo "SLM $SLM_STATE: $SLM_MODEL on port $LLM_PORT"
+wait_for "$LLM_BASE_URL/models" 1800 vllm "$LOGS/vllm.log"
 
 step "Building the corpus from the official sources (download + OCR)"
 "$VENV_APP/bin/python" scripts/build_corpus.py --download || { echo "Corpus build failed; see the errors above." >&2; exit 1; }
 
-step "Starting the application with TTS=$TTS_ENGINE, STT=$STT_ENGINE (GPU $APP_GPUS)"
+step "Starting the application (it brings up the speech service: TTS=$TTS_ENGINE, STT=$STT_ENGINE on GPU $APP_GPUS)"
 # Always (re)start the app: it loads the corpus at startup, and the corpus was just rebuilt.
 if [[ -f "$LOGS/app.pid" ]] && kill -0 "$(cat "$LOGS/app.pid")" 2>/dev/null; then
   echo "restarting the running app so it loads the rebuilt corpus"
@@ -94,15 +57,23 @@ if ! port_free "$PORT"; then
   export PORT="$p"
 fi
 echo "$PORT" >"$LOGS/app.port"
-CUDA_VISIBLE_DEVICES="$APP_GPUS" nohup "$VENV_APP/bin/python" -m uvicorn apps.api.main:app \
+nohup "$VENV_APP/bin/python" -m uvicorn apps.api.main:app \
   --host 127.0.0.1 --port "$PORT" >"$LOGS/app.log" 2>&1 &
 echo $! >"$LOGS/app.pid"
 wait_for "http://127.0.0.1:$PORT/api/v1/health" 1800 app "$LOGS/app.log"
 
-step "Health check"
+step "Health check (waits while the speech models load)"
 "$VENV_APP/bin/python" - "$PORT" <<'EOF'
-import json, sys, urllib.request
-data = json.load(urllib.request.urlopen(f"http://127.0.0.1:{sys.argv[1]}/api/v1/health"))["data"]
+import json, sys, time, urllib.request
+url = f"http://127.0.0.1:{sys.argv[1]}/api/v1/health"
+deadline = time.time() + 1800
+while True:
+    data = json.load(urllib.request.urlopen(url))["data"]
+    loading = [d["name"] for d in data["dependencies"] if d["status"] == "starting"]
+    if not loading or time.time() > deadline:
+        break
+    print(f"  still loading: {', '.join(loading)} …", flush=True)
+    time.sleep(10)
 bad = []
 for d in data["dependencies"]:
     print(f"  {d['name']:7s} {d['status']:15s} {d.get('detail') or ''}")

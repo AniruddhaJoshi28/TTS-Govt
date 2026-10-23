@@ -51,8 +51,8 @@ def test_one_collection_per_state_with_metadata_payload(store):
     stats = sync_corpus(store, [make_doc("mh1", "MH", ["शेतकरी अनुदान योजना"]), make_doc("od1", "OD", ["ଛାତ୍ରାବାସ ସଂକଳ୍ପ"])])
     assert stats == {"indexed": 2, "up_to_date": 0, "removed": 0, "failed": 0}
     names = {c.name for c in store.client.get_collections().collections}
-    assert {"GOVT_MH", "GOVT_OD"} <= names
-    point = store.client.scroll("GOVT_MH", limit=1, with_payload=True)[0][0]
+    assert {"GOVT_MH_mr", "GOVT_OD_or"} <= names
+    point = store.client.scroll("GOVT_MH_mr", limit=1, with_payload=True)[0][0]
     assert point.payload["title"] == "शीर्षक mh1" and point.payload["meta_Document number"] == "123"
     assert point.payload["state"] == "MH" and point.payload["language"] == "mr"
 
@@ -63,7 +63,7 @@ def test_sync_is_idempotent_and_reindexes_new_versions(store):
     assert sync_corpus(store, [doc])["up_to_date"] == 1
     v2 = make_doc("mh1", "MH", ["सुधारित अनुदान"], sha="cd" * 32)
     assert sync_corpus(store, [v2])["indexed"] == 1
-    points = store.client.scroll("GOVT_MH", limit=10, with_payload=True)[0]
+    points = store.client.scroll("GOVT_MH_mr", limit=10, with_payload=True)[0]
     assert len(points) == 1 and points[0].payload["version_id"] == "cd" * 6  # old version's points replaced
 
 
@@ -100,3 +100,41 @@ def test_hybrid_degrades_to_bm25_when_qdrant_fails():
     hybrid = HybridIndex(BM25Index(doc.to_passages()), Broken(), "MH", "mh1")
     hits = hybrid.search("अनुदान", k=3)
     assert hybrid.last_mode == "bm25" and hits[0].passage.passage_id == "mh1:p1:1"
+
+
+def test_passages_split_into_language_collections(store):
+    # A Marathi GR with an English annexure: each passage goes to its own language's collection.
+    doc = make_doc("mh9", "MH", ["शेतकरी अनुदान योजना जाहीर", "Annexure A: list of eligible districts and amounts"])
+    sync_corpus(store, [doc])
+    mr = store.client.scroll("GOVT_MH_mr", limit=10, with_payload=True)[0]
+    en = store.client.scroll("GOVT_MH_en", limit=10, with_payload=True)[0]
+    assert [p.payload["passage_id"] for p in mr] == ["mh9:p1:1"] and mr[0].payload["language"] == "mr"
+    assert [p.payload["passage_id"] for p in en] == ["mh9:p1:2"] and en[0].payload["document_language"] == "mr"
+    # Search covers all of the state's language collections.
+    assert {pid for pid, _ in store.search("eligible districts amounts", "MH")} >= {"mh9:p1:2"}
+    assert store.indexed_versions("MH") == {"mh9": "ab" * 6}
+
+
+def test_reindex_removes_points_from_every_language_collection(store):
+    sync_corpus(store, [make_doc("mh9", "MH", ["शेतकरी अनुदान", "English annexure text"])])
+    sync_corpus(store, [make_doc("mh9", "MH", ["फक्त मराठी मजकूर"], sha="cd" * 32)])
+    assert store.client.scroll("GOVT_MH_en", limit=10)[0] == []  # stale English passage removed
+
+
+def test_passage_language_detection():
+    from services.retrieval.vector_store import passage_language
+
+    assert passage_language("शासन निर्णय", "mr") == "mr"
+    assert passage_language("मध्यप्रदेश शासन आदेश", "hi") == "hi"
+    assert passage_language("ଓଡ଼ିଶା ସରକାର", "en") == "or"
+    assert passage_language("Annexure: list of officers", "mr") == "en"
+    assert passage_language("१२३ ४५६", "mr") == "mr"  # digits only: keep the document language
+
+
+def test_query_embeddings_are_cached(store):
+    calls = []
+    orig = store.embedder.embed_queries
+    store.embedder.embed_queries = lambda texts: calls.append(texts) or orig(texts)
+    store.query_vector("अनुदान  योजना")
+    store.query_vector("अनुदान योजना")  # same question, different spacing
+    assert len(calls) == 1

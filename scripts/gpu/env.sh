@@ -95,3 +95,21 @@ show_gpu_plan() {
   echo "Plan: $LLM_MODEL on GPU $LLM_GPUS (GPU_MEM=$GPU_MEM, context $MAX_MODEL_LEN), speech on GPU $APP_GPUS"
   echo "vLLM: FlashInfer sampler $([[ $VLLM_USE_FLASHINFER_SAMPLER == 0 ]] && echo off || echo on);"        "CUDA compiler: ${VLLM_CUDA_HOME:-system (/usr/local/cuda)}"
 }
+
+# Offline model loading. When a model is already in the Hugging Face cache, services start with
+# HF_HUB_OFFLINE=1 so they never contact huggingface.co: on networks whose proxy blocks it
+# ("403 Forbidden" / ProxyError) an online lookup would make vLLM or the TTS fail at startup.
+# HF_OFFLINE=1 forces offline, HF_OFFLINE=0 forces online (e.g. to download a new model).
+HF_HUB_DIR="${HF_HUB_CACHE:-${HF_HOME:-$HOME/.cache/huggingface}/hub}"
+hf_cached() {  # repo id (org/name) -> true if a downloaded snapshot exists
+  compgen -G "$HF_HUB_DIR/models--${1//\//--}/snapshots/*/config.json" >/dev/null 2>&1 \
+    || compgen -G "$HF_HUB_DIR/models--${1//\//--}/snapshots/*/*" >/dev/null 2>&1
+}
+use_offline_if_cached() {  # repo ids...
+  case "${HF_OFFLINE:-auto}" in
+    1) export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1; return ;;
+    0) return ;;
+  esac
+  local r; for r in "$@"; do hf_cached "$r" || return 0; done
+  export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+}

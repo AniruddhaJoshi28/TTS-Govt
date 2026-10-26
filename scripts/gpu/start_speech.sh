@@ -22,7 +22,12 @@ if [[ -f "$LOGS/speech.pid" ]] && kill -0 "$(cat "$LOGS/speech.pid")" 2>/dev/nul
 fi
 port_free "$SPEECH_PORT" || SPEECH_PORT="$(next_free_port $((SPEECH_PORT + 1)))"
 echo "$SPEECH_PORT" >"$LOGS/speech.port"
+# Speech models used by TTS_ENGINE=parler / STT_ENGINE=indicconformer (and Parler's text encoder).
+SPEECH_MODELS=()
+[[ "${TTS_ENGINE:-}" == parler ]] && SPEECH_MODELS+=(ai4bharat/indic-parler-tts)
+[[ "${STT_ENGINE:-}" == indicconformer ]] && SPEECH_MODELS+=(ai4bharat/indic-conformer-600m-multilingual)
+(( ${#SPEECH_MODELS[@]} )) && use_offline_if_cached "${SPEECH_MODELS[@]}"
 CUDA_VISIBLE_DEVICES="${APP_GPUS:-0}" nohup "$PY" -m uvicorn apps.speech_service.main:app \
   --host 127.0.0.1 --port "$SPEECH_PORT" >"$LOGS/speech.log" 2>&1 &
 echo $! >"$LOGS/speech.pid"
-echo "started $SPEECH_PORT"
+echo "started $SPEECH_PORT${HF_HUB_OFFLINE:+ (offline: cached models)}"

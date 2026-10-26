@@ -117,8 +117,11 @@ class VectorStore:
 
         # Only the core REST API (collections, upsert, query_points, scroll) is used, which is stable
         # across 1.x; skip the strict client/server minor-version check (server here is 1.14).
+        # Connect directly by default: an HTTP(S)_PROXY in the environment (common on campus/office
+        # networks) may refuse the Qdrant host with "403 Forbidden". QDRANT_USE_PROXY=1 restores it.
         client = QdrantClient(url=url, api_key=os.environ.get("QDRANT_API_KEY") or None, timeout=30,
-                              port=None if url.startswith("http") else 6333, check_compatibility=False)
+                              port=None if url.startswith("http") else 6333, check_compatibility=False,
+                              trust_env=os.environ.get("QDRANT_USE_PROXY", "0") == "1")
         return cls(client, FastEmbedder(os.environ.get("EMBED_MODEL", DEFAULT_MODEL)),
                    prefix=os.environ.get("QDRANT_COLLECTION_PREFIX", "GOVT_"),
                    min_score=float(os.environ.get("VECTOR_MIN_SCORE", "0.80")))

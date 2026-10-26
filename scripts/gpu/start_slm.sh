@@ -32,8 +32,9 @@ if (( LLM_FREE_MB < 10000 )) && [[ -z "${GPU_MEM_OVERRIDE:-}" ]]; then
 fi
 port_free "$LLM_PORT" || LLM_PORT="$(next_free_port $((LLM_PORT + 1)))"
 echo "$LLM_PORT" >"$LOGS/vllm.port"
-nohup "${VLLM_ENV[@]}" CUDA_VISIBLE_DEVICES="$LLM_GPUS" "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
+use_offline_if_cached "$LLM_MODEL"
+nohup "${VLLM_ENV[@]}" ${HF_HUB_OFFLINE:+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1} CUDA_VISIBLE_DEVICES="$LLM_GPUS" "$VENV_VLLM/bin/vllm" serve "$LLM_MODEL" --port "$LLM_PORT" \
   --dtype bfloat16 --max-model-len "$MAX_MODEL_LEN" --gpu-memory-utilization "$GPU_MEM" \
   --served-model-name "$LLM_MODEL" >"$LOGS/vllm.log" 2>&1 &
 echo $! >"$LOGS/vllm.pid"
-echo "started $LLM_PORT $LLM_MODEL"
+echo "started $LLM_PORT $LLM_MODEL${HF_HUB_OFFLINE:+ (offline: cached model)}"

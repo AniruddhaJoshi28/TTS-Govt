@@ -109,10 +109,24 @@ class Pipeline:
         self.rt.vector_status = {"status": "ok" if not stats["failed"] else "degraded", "detail": stats}
         return stats
 
+    def slm_ready(self) -> bool:
+        """True only when the model server is confirmed to answer — not merely configured
+        (a stale LLM_BASE_URL in .env must not count as ready)."""
+        sup = getattr(self.rt, "supervisor", None)
+        if sup is not None and getattr(sup, "enabled", False):
+            return sup.status.get("slm", {}).get("status") == "ok" and self.rt.llm is not None
+        if self.rt.llm is None:
+            return False
+        try:
+            import requests
+            return requests.get(f"{self.rt.llm.config.base_url}/models", timeout=5).ok
+        except Exception:
+            return False
+
     def agent_summarise(self, ctx: dict) -> dict:
-        llm = self.rt.llm
-        if llm is None:
+        if not self.slm_ready():
             raise Skip("SLM not ready")
+        llm = self.rt.llm
         wanted = [w.strip() for w in os.environ.get("WARM_LANGUAGES", "native").split(",") if w.strip()]
         jobs = []
         for doc in self.rt.corpus.values():
@@ -138,6 +152,11 @@ class Pipeline:
         report = run_farm(jobs, work, workers=_env_int("SUMMARY_WORKERS", 4),
                           label=lambda j: f"{j[0].entry.id}/{j[1].value}",
                           should_stop=lambda: model_down["n"] >= 3)
+        if model_down["n"] >= 3:
+            raise RuntimeError(f"SLM stopped responding after {report.done} summaries: "
+                               + (report.errors[-1] if report.errors else "model unavailable"))
+        if report.total and report.done == 0 and report.failed:
+            raise RuntimeError(f"all {report.failed} summaries failed: {report.errors[0]}")
         return report.as_dict()
 
     # -- workflows -------------------------------------------------------------------------
@@ -196,7 +215,7 @@ class Pipeline:
     def _wait_for_slm(self) -> bool:
         deadline = time.monotonic() + _env_int("SERVICE_START_TIMEOUT", 1800)
         while time.monotonic() < deadline and not self._stop.is_set():
-            if self.rt.llm is not None:
+            if self.slm_ready():
                 return True
             time.sleep(5)
         return False
